@@ -7,7 +7,8 @@ Bu depo tek kullanımlık bir prototip değildir. Android istemcisi, sunucu, LLM
 ## Faz durumu
 
 - Faz 1: üretim mimarisi, native Android kabuğu, tasarım sistemi, menüler, ders oluşturma formu, ders çalışma alanı, domain doğrulaması ve CI temeli
-- Supabase ve Render: hesap bilgileri eklenene kadar yerel adaptör sınırında
+- Render: gerçek API ve Edge TTS servisleri Frankfurt bölgesinde oluşturuldu
+- Supabase: geçerli proje erişimi sağlandığında migration ve RLS bağlantısı yapılacak
 - DeepSeek V4 Pro: anahtar yalnızca sunucuda kullanılan gerçek sağlayıcı adaptörü
 - Edge TTS: ayrı Python servisi; üretilen sesler sonraki fazda içerik karmasıyla önbelleklenecek
 
