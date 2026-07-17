@@ -8,7 +8,7 @@ Bu depo tek kullanımlık bir prototip değildir. Android istemcisi, sunucu, LLM
 
 - Faz 1: üretim mimarisi, native Android kabuğu, tasarım sistemi, menüler, ders oluşturma formu, ders çalışma alanı, domain doğrulaması ve CI temeli
 - Render: gerçek API ve Edge TTS servisleri Frankfurt bölgesinde oluşturuldu
-- Supabase: geçerli proje erişimi sağlandığında migration ve RLS bağlantısı yapılacak
+- Supabase: Frankfurt projesi, Auth şeması, RLS politikaları ve özel Storage bucket'ları bağlı
 - DeepSeek V4 Pro: anahtar yalnızca sunucuda kullanılan gerçek sağlayıcı adaptörü
 - Edge TTS: ayrı Python servisi; üretilen sesler sonraki fazda içerik karmasıyla önbelleklenecek
 
@@ -27,6 +27,7 @@ backend/
   domain/                    Sunucu domain portları
   application/               İş akışı ve orkestrasyon
   infrastructure/deepseek/   DeepSeek V4 Pro istemcisi
+  infrastructure/supabase/   Supabase bağlantı ve sağlık adaptörü
   api/                       Render üzerinde çalışacak Ktor API
 services/edge-tts/            Edge TTS mikroservisi
 contracts/                    Mobil-sunucu sözleşmeleri
@@ -53,7 +54,7 @@ Hiçbir API anahtarı depoya veya APK'ya yazılmaz.
 DEEPSEEK_API_KEY
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-v4-pro
-SUPABASE_URL                 sonraki bağlantı fazı
+SUPABASE_URL                 yalnızca sunucu
 SUPABASE_SERVICE_ROLE_KEY    yalnızca sunucu
 ```
 

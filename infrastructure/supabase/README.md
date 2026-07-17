@@ -1,14 +1,19 @@
-# Supabase bağlantı sınırı
+# Supabase altyapısı
 
-Supabase hesabı henüz bağlanmadığı için bu klasör bilinçli olarak migration çalıştırmaz ve uzak bir projeye yazmaz.
+Bu klasör, uygulamanın Supabase şemasının tek kaynak kaydıdır. Migration dosyaları
+isim sırasıyla çalıştırılır ve uygulanan sürüm `public.app_schema_versions`
+tablosuna yazılır.
 
-Faz 7'de burada aşağıdakiler yer alacaktır:
+İlk migration şunları kurar:
 
-- ileri/geri güvenli SQL migration dosyaları
-- tüm kullanıcı tabloları için RLS politikaları
-- Storage bucket politikaları
-- public ders yayınlama/fork fonksiyonları
-- provider usage ve cost ledger rollup fonksiyonları
-- yerel Supabase test yapılandırması
+- Auth kullanıcısından otomatik profil ve ücretsiz hak kaydı
+- kaynak, revizyon, format, ders, kart ve ilerleme tabloları
+- TTS varlıkları, indirmeler ve arka plan işleri
+- sağlayıcı kullanımı, maliyet, abonelik ve hak tabloları
+- yönetim analitiği ve değiştirilemez denetim kaydı
+- sahiplik/public içerik kuralları için RLS politikaları
+- özel PDF ve TTS Storage bucket'ları
+- anahtar göstermeyen `app_health()` doğrulama fonksiyonu
 
-Service role anahtarı hiçbir zaman Android modülüne eklenmeyecektir.
+`SUPABASE_SERVICE_ROLE_KEY` yalnızca Render secret store'da tutulur. Android
+uygulamasına veya GitHub dosyalarına hiçbir zaman yazılmaz.

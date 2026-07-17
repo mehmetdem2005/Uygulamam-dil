@@ -16,6 +16,7 @@ dependencies {
     implementation(project(":backend:domain"))
     implementation(project(":backend:application"))
     implementation(project(":backend:infrastructure:deepseek"))
+    implementation(project(":backend:infrastructure:supabase"))
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.ktor.server.core)
@@ -26,4 +27,3 @@ dependencies {
     implementation(libs.ktor.serialization.json)
     runtimeOnly(libs.logback.classic)
 }
-

@@ -25,5 +25,5 @@ include(":android:feature:lesson")
 include(":backend:domain")
 include(":backend:application")
 include(":backend:infrastructure:deepseek")
+include(":backend:infrastructure:supabase")
 include(":backend:api")
-
