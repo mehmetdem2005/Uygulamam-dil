@@ -1,0 +1,82 @@
+openapi: 3.1.0
+info:
+  title: Uygulamam Dil API
+  version: 0.1.0-phase01
+servers:
+  - url: https://render-address-will-be-configured.example
+    description: Render placeholder; not a deployed mock API
+paths:
+  /health:
+    get:
+      operationId: health
+      responses:
+        "200":
+          description: Service health without secrets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /v1/development/lesson-blocks:stream:
+    post:
+      operationId: streamDevelopmentLessonBlocks
+      description: Phase-1 provider verification endpoint. Replaced by authenticated job endpoints in Phase 4.
+      parameters:
+        - in: header
+          name: X-Development-Token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StreamLessonBlocksRequest"
+      responses:
+        "200":
+          description: Server-sent event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "401":
+          description: Invalid development token
+        "503":
+          description: Provider or authentication is not configured
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, deepSeekConfigured, authConfigured]
+      properties:
+        status:
+          type: string
+        deepSeekConfigured:
+          type: boolean
+        authConfigured:
+          type: boolean
+    StreamLessonBlocksRequest:
+      type: object
+      required: [sourceText, instruction]
+      properties:
+        sourceText:
+          type: string
+          minLength: 1
+          maxLength: 120000
+        instruction:
+          type: string
+          minLength: 10
+          maxLength: 4000
+        firstBlockIndex:
+          type: integer
+          minimum: 0
+          default: 0
+        blockCount:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 1
+        thinkingEnabled:
+          type: boolean
+          default: false
+
