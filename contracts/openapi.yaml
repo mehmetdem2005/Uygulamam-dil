@@ -47,7 +47,13 @@ components:
   schemas:
     HealthResponse:
       type: object
-      required: [status, deepSeekConfigured, authConfigured]
+      required:
+        - status
+        - deepSeekConfigured
+        - authConfigured
+        - developmentAuthConfigured
+        - supabaseConfigured
+        - supabaseReachable
       properties:
         status:
           type: string
@@ -55,6 +61,14 @@ components:
           type: boolean
         authConfigured:
           type: boolean
+        developmentAuthConfigured:
+          type: boolean
+        supabaseConfigured:
+          type: boolean
+        supabaseReachable:
+          type: boolean
+        supabaseSchemaVersion:
+          type: [string, "null"]
     StreamLessonBlocksRequest:
       type: object
       required: [sourceText, instruction]
@@ -79,4 +93,3 @@ components:
         thinkingEnabled:
           type: boolean
           default: false
-

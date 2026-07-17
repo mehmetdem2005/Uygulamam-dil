@@ -67,3 +67,39 @@ jobs:
       - name: Run service tests
         working-directory: services/edge-tts
         run: python -m pytest -q
+
+  publish-preview-apk:
+    name: Publish preview APK
+    if: github.event_name == 'push' && github.ref == 'refs/heads/agent/phase-01-foundation'
+    needs: [kotlin-tests, android-apk, edge-tts-tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: phase-01-preview
+      APK_NAME: UygulamamDil-phase01-debug.apk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: uygulamam-dil-phase01-debug-apk
+          path: release
+      - name: Prepare APK and checksum
+        run: |
+          mv release/app-debug.apk "release/${APK_NAME}"
+          sha256sum "release/${APK_NAME}" > "release/${APK_NAME}.sha256"
+      - name: Create or update prerelease
+        run: |
+          if ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release create "${RELEASE_TAG}" \
+              --target "${GITHUB_SHA}" \
+              --title "Uygulamam Dil — Faz 01 Önizleme" \
+              --notes "Native Android Faz 01 doğrulanmış debug APK önizlemesi." \
+              --prerelease
+          fi
+          gh release upload "${RELEASE_TAG}" \
+            "release/${APK_NAME}" \
+            "release/${APK_NAME}.sha256" \
+            --clobber

@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: uygulamam-dil-api
+    runtime: docker
+    repo: https://github.com/mehmetdem2005/Uygulamam-dil
+    branch: agent/phase-01-foundation
+    plan: free
+    region: frankfurt
+    numInstances: 1
+    autoDeployTrigger: checksPass
+    healthCheckPath: /health
+    dockerfilePath: ./backend/api/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEEPSEEK_BASE_URL
+        value: https://api.deepseek.com
+      - key: DEEPSEEK_MODEL
+        value: deepseek-v4-pro
+      - key: DEVELOPMENT_API_TOKEN
+        generateValue: true
+      - key: EDGE_TTS_BASE_URL
+        value: https://uygulamam-dil-edge-tts.onrender.com
+      - key: EDGE_TTS_INTERNAL_TOKEN
+        fromService:
+          type: web
+          name: uygulamam-dil-edge-tts
+          envVarKey: EDGE_TTS_INTERNAL_TOKEN
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+  - type: web
+    name: uygulamam-dil-edge-tts
+    runtime: docker
+    repo: https://github.com/mehmetdem2005/Uygulamam-dil
+    branch: agent/phase-01-foundation
+    plan: free
+    region: frankfurt
+    numInstances: 1
+    autoDeployTrigger: checksPass
+    healthCheckPath: /health
+    dockerfilePath: ./services/edge-tts/Dockerfile
+    dockerContext: ./services/edge-tts
+    envVars:
+      - key: EDGE_TTS_INTERNAL_TOKEN
+        generateValue: true

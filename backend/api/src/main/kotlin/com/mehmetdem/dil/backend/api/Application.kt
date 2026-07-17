@@ -4,6 +4,8 @@ import com.mehmetdem.dil.backend.deepseek.DeepSeekConfig
 import com.mehmetdem.dil.backend.deepseek.DeepSeekModelGateway
 import com.mehmetdem.dil.backend.domain.ModelGenerationRequest
 import com.mehmetdem.dil.backend.domain.ModelStreamEvent
+import com.mehmetdem.dil.backend.supabase.SupabaseConfig
+import com.mehmetdem.dil.backend.supabase.SupabaseHealthGateway
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
@@ -40,6 +42,8 @@ fun Application.module() {
     }
     val apiKey = System.getenv("DEEPSEEK_API_KEY").orEmpty()
     val developmentToken = System.getenv("DEVELOPMENT_API_TOKEN").orEmpty()
+    val supabaseUrl = System.getenv("SUPABASE_URL").orEmpty()
+    val supabaseServiceRoleKey = System.getenv("SUPABASE_SERVICE_ROLE_KEY").orEmpty()
     val gateway = apiKey.takeIf(String::isNotBlank)?.let {
         DeepSeekModelGateway(
             DeepSeekConfig(
@@ -48,6 +52,16 @@ fun Application.module() {
                 model = System.getenv("DEEPSEEK_MODEL") ?: "deepseek-v4-pro",
             ),
         )
+    }
+    val supabaseGateway = if (supabaseUrl.isNotBlank() && supabaseServiceRoleKey.isNotBlank()) {
+        SupabaseHealthGateway(
+            SupabaseConfig(
+                url = supabaseUrl,
+                serviceRoleKey = supabaseServiceRoleKey,
+            ),
+        )
+    } else {
+        null
     }
 
     install(ContentNegotiation) { json(json) }
@@ -64,11 +78,16 @@ fun Application.module() {
 
     routing {
         get("/health") {
+            val supabaseHealth = supabaseGateway?.check()
             call.respond(
                 HealthResponse(
-                    status = "ok",
+                    status = if (gateway != null && supabaseHealth?.reachable == true) "ok" else "degraded",
                     deepSeekConfigured = gateway != null,
-                    authConfigured = developmentToken.isNotBlank(),
+                    authConfigured = supabaseGateway != null,
+                    developmentAuthConfigured = developmentToken.isNotBlank(),
+                    supabaseConfigured = supabaseGateway != null,
+                    supabaseReachable = supabaseHealth?.reachable == true,
+                    supabaseSchemaVersion = supabaseHealth?.schemaVersion,
                 ),
             )
         }
@@ -135,6 +154,10 @@ private data class HealthResponse(
     val status: String,
     val deepSeekConfigured: Boolean,
     val authConfigured: Boolean,
+    val developmentAuthConfigured: Boolean,
+    val supabaseConfigured: Boolean,
+    val supabaseReachable: Boolean,
+    val supabaseSchemaVersion: String? = null,
 )
 
 @Serializable
