@@ -1,0 +1,24 @@
+# Yer tutucu Blueprint. Render hesabı bağlandığında adlar, planlar, bölgeler,
+# health check ve secret referansları gerçek proje değerleriyle güncellenecek.
+services:
+  - type: web
+    name: uygulamam-dil-api-placeholder
+    runtime: docker
+    dockerfilePath: ./backend/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEVELOPMENT_API_TOKEN
+        sync: false
+  - type: web
+    name: uygulamam-dil-edge-tts-placeholder
+    runtime: docker
+    dockerfilePath: ./services/edge-tts/Dockerfile
+    dockerContext: ./services/edge-tts
+    healthCheckPath: /health
+    envVars:
+      - key: EDGE_TTS_INTERNAL_TOKEN
+        sync: false
+
