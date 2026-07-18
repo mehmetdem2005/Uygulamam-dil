@@ -196,7 +196,7 @@ private fun sourceMeta(lesson: StoredLesson): String = when (val range = lesson.
 }
 
 private fun stateLabel(state: LessonJobState): String = when (state) {
-    LessonJobState.CREATED -> "Kaydedildi"
+    LessonJobState.CREATED -> "Sunucuya bağlanıyor"
     LessonJobState.INGESTING -> "Kaynak işleniyor"
     LessonJobState.GENERATING -> "Kartlar üretiliyor"
     LessonJobState.PAUSED -> "Duraklatıldı"

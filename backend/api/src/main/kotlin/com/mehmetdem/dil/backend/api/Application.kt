@@ -3,6 +3,12 @@ package com.mehmetdem.dil.backend.api
 import com.mehmetdem.dil.backend.deepseek.DeepSeekConfig
 import com.mehmetdem.dil.backend.deepseek.DeepSeekModelGateway
 import com.mehmetdem.dil.backend.application.FormatSchemaCompiler
+import com.mehmetdem.dil.backend.application.FileLessonJobStore
+import com.mehmetdem.dil.backend.application.IdempotencyConflictException
+import com.mehmetdem.dil.backend.application.LessonJobLimits
+import com.mehmetdem.dil.backend.application.LessonJobNotFoundException
+import com.mehmetdem.dil.backend.application.LessonJobOrchestrator
+import com.mehmetdem.dil.backend.application.LessonJobOwnershipException
 import com.mehmetdem.dil.backend.domain.FormatFieldDefinition
 import com.mehmetdem.dil.backend.domain.FormatFieldKind
 import com.mehmetdem.dil.backend.domain.FormatTeachingMode
@@ -42,6 +48,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.nio.file.Files
+import java.nio.file.Path
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -58,6 +65,7 @@ fun Application.module() {
     }
     val apiKey = System.getenv("DEEPSEEK_API_KEY").orEmpty()
     val developmentToken = System.getenv("DEVELOPMENT_API_TOKEN").orEmpty()
+    val previewTokenSecret = System.getenv("PREVIEW_TOKEN_SECRET").orEmpty()
     val supabaseUrl = System.getenv("SUPABASE_URL").orEmpty()
     val supabaseServiceRoleKey = System.getenv("SUPABASE_SERVICE_ROLE_KEY").orEmpty()
     val gateway = apiKey.takeIf(String::isNotBlank)?.let {
@@ -71,6 +79,30 @@ fun Application.module() {
     }
     val sourceGateway = SourceIngestionService()
     val formatCompiler = FormatSchemaCompiler()
+    val jobDataRoot = Path.of(
+        System.getenv("JOB_DATA_DIR")?.takeIf(String::isNotBlank)
+            ?: "${System.getProperty("java.io.tmpdir")}/uygulamam-dil",
+    ).toAbsolutePath().normalize()
+    val jobStore = FileLessonJobStore(jobDataRoot, json)
+    val uploadStore = SourceUploadStore(jobDataRoot, json)
+    val previewTokenService = previewTokenSecret.takeIf { it.length >= 32 }?.let { PreviewTokenService(it, json) }
+    val orchestrator = gateway?.let {
+        LessonJobOrchestrator(
+            store = jobStore,
+            sourceGateway = sourceGateway,
+            modelGateway = it,
+            formatCompiler = formatCompiler,
+            json = json,
+            limits = LessonJobLimits(
+                maxProviderAttemptsPerBatch = envInt("LLM_MAX_ATTEMPTS", 3, 1..5),
+                providerTimeoutSeconds = envInt("LLM_TIMEOUT_SECONDS", 120, 15..300),
+                maxTotalTokens = envLong("LLM_MAX_TOTAL_TOKENS_PER_JOB", 250_000, 1_000L..2_000_000L),
+                maxEstimatedCostMicroUsd = envLong("LLM_MAX_COST_MICRO_USD_PER_JOB", 5_000_000, 0L..100_000_000L),
+                inputPriceMicroUsdPerMillionTokens = envLong("DEEPSEEK_INPUT_MICRO_USD_PER_MILLION_TOKENS", 0, 0L..100_000_000L),
+                outputPriceMicroUsdPerMillionTokens = envLong("DEEPSEEK_OUTPUT_MICRO_USD_PER_MILLION_TOKENS", 0, 0L..100_000_000L),
+            ),
+        ).also(LessonJobOrchestrator::recoverIncompleteJobs)
+    }
     val supabaseGateway = if (supabaseUrl.isNotBlank() && supabaseServiceRoleKey.isNotBlank()) {
         SupabaseHealthGateway(
             SupabaseConfig(
@@ -88,11 +120,29 @@ fun Application.module() {
         exception<DevelopmentUnauthorizedException> { call, cause ->
             call.respond(HttpStatusCode.Unauthorized, ApiError("unauthorized", cause.message ?: "Unauthorized"))
         }
+        exception<PreviewUnauthorizedException> { call, cause ->
+            call.respond(HttpStatusCode.Unauthorized, ApiError("preview_unauthorized", cause.message ?: "Unauthorized"))
+        }
+        exception<PreviewRateLimitException> { call, cause ->
+            call.respond(HttpStatusCode.TooManyRequests, ApiError("preview_limit_reached", cause.message ?: "Rate limit reached"))
+        }
+        exception<LessonJobNotFoundException> { call, cause ->
+            call.respond(HttpStatusCode.NotFound, ApiError("job_not_found", cause.message ?: "Job not found"))
+        }
+        exception<LessonJobOwnershipException> { call, _ ->
+            call.respond(HttpStatusCode.NotFound, ApiError("job_not_found", "Ders işi bulunamadı."))
+        }
+        exception<IdempotencyConflictException> { call, cause ->
+            call.respond(HttpStatusCode.Conflict, ApiError("idempotency_conflict", cause.message ?: "Conflict"))
+        }
         exception<ServiceNotConfiguredException> { call, cause ->
             call.respond(HttpStatusCode.ServiceUnavailable, ApiError("service_not_configured", cause.message ?: "Service unavailable"))
         }
         exception<IllegalArgumentException> { call, cause ->
             call.respond(HttpStatusCode.BadRequest, ApiError("invalid_request", cause.message ?: "Invalid request"))
+        }
+        exception<IllegalStateException> { call, cause ->
+            call.respond(HttpStatusCode.Conflict, ApiError("invalid_job_state", cause.message ?: "Invalid job state"))
         }
         exception<Throwable> { call, cause ->
             this@module.environment.log.error("Unhandled API failure", cause)
@@ -105,14 +155,27 @@ fun Application.module() {
             val supabaseHealth = supabaseGateway?.check()
             call.respond(
                 HealthResponse(
-                    status = if (gateway != null && supabaseHealth?.reachable == true) "ok" else "degraded",
+                    status = if (gateway != null && previewTokenService != null) "ok" else "degraded",
                     deepSeekConfigured = gateway != null,
-                    authConfigured = supabaseGateway != null,
+                    authConfigured = previewTokenService != null || supabaseGateway != null,
                     developmentAuthConfigured = developmentToken.isNotBlank(),
+                    previewJobsConfigured = previewTokenService != null && orchestrator != null,
                     supabaseConfigured = supabaseGateway != null,
                     supabaseReachable = supabaseHealth?.reachable == true,
                     supabaseSchemaVersion = supabaseHealth?.schemaVersion,
                 ),
+            )
+        }
+
+        if (previewTokenService != null && orchestrator != null) {
+            previewJobRoutes(
+                json = json,
+                tokenService = previewTokenService,
+                uploadStore = uploadStore,
+                jobStore = jobStore,
+                orchestrator = orchestrator,
+                dailyJobLimit = envInt("PREVIEW_DAILY_JOB_LIMIT", 25, 1..500),
+                maxPdfBytes = envLong("MAX_PDF_UPLOAD_BYTES", 50L * 1024 * 1024, 1L * 1024 * 1024..100L * 1024 * 1024),
             )
         }
 
@@ -273,10 +336,17 @@ private data class HealthResponse(
     val deepSeekConfigured: Boolean,
     val authConfigured: Boolean,
     val developmentAuthConfigured: Boolean,
+    val previewJobsConfigured: Boolean,
     val supabaseConfigured: Boolean,
     val supabaseReachable: Boolean,
     val supabaseSchemaVersion: String? = null,
 )
+
+private fun envInt(name: String, default: Int, range: IntRange): Int =
+    (System.getenv(name)?.toIntOrNull() ?: default).also { require(it in range) { "$name değeri geçersiz." } }
+
+private fun envLong(name: String, default: Long, range: LongRange): Long =
+    (System.getenv(name)?.toLongOrNull() ?: default).also { require(it in range) { "$name değeri geçersiz." } }
 
 @Serializable
 private data class ApiError(val code: String, val message: String)

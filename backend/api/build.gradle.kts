@@ -27,4 +27,6 @@ dependencies {
     implementation(libs.ktor.server.call.logging)
     implementation(libs.ktor.serialization.json)
     runtimeOnly(libs.logback.classic)
+    testImplementation(kotlin("test-junit"))
+    testImplementation(libs.junit)
 }

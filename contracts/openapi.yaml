@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Uygulamam Dil API
-  version: 0.3.0-phase03
+  version: 0.4.0-phase04
 servers:
   - url: https://uygulamam-dil-api.onrender.com
     description: Render API
@@ -16,6 +16,145 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+  /v1/preview/sessions:
+    post:
+      operationId: createPreviewSession
+      description: Issues a short-lived, signed preview token; no provider secret is shipped in the APK.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreviewSessionRequest"
+      responses:
+        "200":
+          description: Short-lived preview session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreviewSessionResponse"
+  /v1/preview/pdf-uploads:
+    post:
+      operationId: uploadPreviewPdf
+      security:
+        - previewBearer: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Owner-bound PDF upload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PdfUploadResponse"
+  /v1/preview/lesson-jobs:
+    post:
+      operationId: createPreviewLessonJob
+      description: Starts or returns the idempotent durable lesson job.
+      security:
+        - previewBearer: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 160
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLessonJobRequest"
+      responses:
+        "202":
+          description: Job accepted; processing continues after the mobile connection closes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonJob"
+        "409":
+          description: Idempotency key was reused for different input.
+        "429":
+          description: Preview daily limit reached.
+  /v1/preview/lesson-jobs/{jobId}:
+    get:
+      operationId: getPreviewLessonJob
+      security:
+        - previewBearer: []
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: Latest durable job snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonJob"
+  /v1/preview/lesson-jobs/{jobId}/events:
+    get:
+      operationId: streamPreviewLessonJob
+      security:
+        - previewBearer: []
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: Versioned job snapshots over SSE; disconnecting does not cancel generation.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+  /v1/preview/lesson-jobs/{jobId}/pause:
+    post:
+      operationId: pausePreviewLessonJob
+      security:
+        - previewBearer: []
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          $ref: "#/components/responses/LessonJobResponse"
+  /v1/preview/lesson-jobs/{jobId}/resume:
+    post:
+      operationId: resumePreviewLessonJob
+      security:
+        - previewBearer: []
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          $ref: "#/components/responses/LessonJobResponse"
+  /v1/preview/lesson-jobs/{jobId}/retry:
+    post:
+      operationId: retryPreviewLessonJob
+      security:
+        - previewBearer: []
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          $ref: "#/components/responses/LessonJobResponse"
+  /v1/preview/lesson-jobs/{jobId}/cancel:
+    post:
+      operationId: cancelPreviewLessonJob
+      security:
+        - previewBearer: []
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          $ref: "#/components/responses/LessonJobResponse"
   /v1/development/lesson-blocks:stream:
     post:
       operationId: streamDevelopmentLessonBlocks
@@ -114,7 +253,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/CompileFormatResponse"
 components:
+  securitySchemes:
+    previewBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: HMAC preview session
+  responses:
+    LessonJobResponse:
+      description: Updated job snapshot
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/LessonJob"
   parameters:
+    JobId:
+      in: path
+      name: jobId
+      required: true
+      schema:
+        type: string
+        format: uuid
     DevelopmentToken:
       in: header
       name: X-Development-Token
@@ -129,6 +287,7 @@ components:
         - deepSeekConfigured
         - authConfigured
         - developmentAuthConfigured
+        - previewJobsConfigured
         - supabaseConfigured
         - supabaseReachable
       properties:
@@ -140,12 +299,198 @@ components:
           type: boolean
         developmentAuthConfigured:
           type: boolean
+        previewJobsConfigured:
+          type: boolean
         supabaseConfigured:
           type: boolean
         supabaseReachable:
           type: boolean
         supabaseSchemaVersion:
           type: [string, "null"]
+    PreviewSessionRequest:
+      type: object
+      additionalProperties: false
+      required: [installationId]
+      properties:
+        installationId:
+          type: string
+          minLength: 8
+          maxLength: 100
+        appVersion:
+          type: [string, "null"]
+    PreviewSessionResponse:
+      type: object
+      required: [accessToken, expiresAtEpochSeconds]
+      properties:
+        accessToken:
+          type: string
+        expiresAtEpochSeconds:
+          type: integer
+    PdfUploadResponse:
+      type: object
+      required: [uploadId, fileName, sizeBytes]
+      properties:
+        uploadId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        sizeBytes:
+          type: integer
+    CreateLessonJobRequest:
+      type: object
+      additionalProperties: false
+      required: [localLessonId, source, format, qualityMode, continuousRequests]
+      properties:
+        localLessonId:
+          type: string
+        source:
+          $ref: "#/components/schemas/JobSource"
+        format:
+          $ref: "#/components/schemas/JobFormat"
+        qualityMode:
+          type: boolean
+        continuousRequests:
+          type: boolean
+    JobSource:
+      type: object
+      additionalProperties: false
+      required: [kind, displayName]
+      properties:
+        kind:
+          type: string
+          enum: [youtube, pdf]
+        displayName:
+          type: string
+        videoId:
+          type: [string, "null"]
+        uploadId:
+          type: [string, "null"]
+        startMillis:
+          type: [integer, "null"]
+        endMillisExclusive:
+          type: [integer, "null"]
+        startPage:
+          type: [integer, "null"]
+        endPageInclusive:
+          type: [integer, "null"]
+    JobFormat:
+      type: object
+      additionalProperties: false
+      required: [formatId, revision, title, instruction, teachingMode, teachingLanguage, targetLanguage, learnerLevel, fields, totalBlockCount, blocksPerRequest, requestIntervalSeconds, cardWidthFraction]
+      properties:
+        formatId:
+          type: string
+        revision:
+          type: integer
+        title:
+          type: string
+        instruction:
+          type: string
+        teachingMode:
+          type: string
+          enum: [language, explain, summary, translate, custom]
+        teachingLanguage:
+          type: string
+        targetLanguage:
+          type: string
+        learnerLevel:
+          type: string
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobFormatField"
+        totalBlockCount:
+          type: integer
+          minimum: 1
+          maximum: 100
+        blocksPerRequest:
+          type: integer
+          minimum: 1
+          maximum: 10
+        requestIntervalSeconds:
+          type: integer
+          minimum: 2
+          maximum: 120
+        cardWidthFraction:
+          type: number
+          minimum: 0.72
+          maximum: 1
+    JobFormatField:
+      allOf:
+        - $ref: "#/components/schemas/FormatFieldRequest"
+        - type: object
+          required: [kind, required, visible, speakable, position]
+    LessonJob:
+      type: object
+      required: [jobId, localLessonId, state, completedBlockCount, totalBlockCount, blocks, metrics, version, createdAtEpochMillis, updatedAtEpochMillis]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        localLessonId:
+          type: string
+        state:
+          type: string
+          enum: [created, ingesting, generating, paused, ready, failed, cancelled]
+        completedBlockCount:
+          type: integer
+        totalBlockCount:
+          type: integer
+        blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonBlock"
+        metrics:
+          $ref: "#/components/schemas/LessonMetrics"
+        errorCode:
+          type: [string, "null"]
+        errorMessage:
+          type: [string, "null"]
+        version:
+          type: integer
+        createdAtEpochMillis:
+          type: integer
+        updatedAtEpochMillis:
+          type: integer
+    LessonBlock:
+      type: object
+      required: [index, targetText, fieldValues]
+      properties:
+        index:
+          type: integer
+        title:
+          type: [string, "null"]
+        sourceText:
+          type: [string, "null"]
+        targetText:
+          type: string
+        translation:
+          type: [string, "null"]
+        pronunciation:
+          type: [string, "null"]
+        explanation:
+          type: [string, "null"]
+        fieldValues:
+          type: object
+          additionalProperties:
+            type: string
+    LessonMetrics:
+      type: object
+      required: [providerRequestCount, inputTokens, outputTokens, totalTokens, providerLatencyMillis, estimatedCostMicroUsd]
+      properties:
+        providerRequestCount:
+          type: integer
+        inputTokens:
+          type: integer
+        outputTokens:
+          type: integer
+        totalTokens:
+          type: integer
+        providerLatencyMillis:
+          type: integer
+        estimatedCostMicroUsd:
+          type: integer
     StreamLessonBlocksRequest:
       type: object
       required: [sourceText, instruction]

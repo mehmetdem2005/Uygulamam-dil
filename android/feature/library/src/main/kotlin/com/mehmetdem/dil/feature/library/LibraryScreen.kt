@@ -271,7 +271,7 @@ private fun timeLabel(millis: Long): String {
 
 private fun stateLabel(state: LessonJobState): String = when (state) {
     LessonJobState.DRAFT -> "Taslak"
-    LessonJobState.CREATED -> "Kaydedildi"
+    LessonJobState.CREATED -> "Sunucuya bağlanıyor"
     LessonJobState.INGESTING -> "Kaynak işleniyor"
     LessonJobState.GENERATING -> "Kartlar hazırlanıyor"
     LessonJobState.PAUSED -> "Duraklatıldı"

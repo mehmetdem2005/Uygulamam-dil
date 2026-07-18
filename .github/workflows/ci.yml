@@ -57,11 +57,11 @@ jobs:
           "${BUILD_TOOLS}/zipalign" -c -v 4 "${APK}"
           "${BUILD_TOOLS}/apksigner" verify --verbose --print-certs "${APK}"
           "${BUILD_TOOLS}/aapt" dump badging "${APK}" | tee apk-badging.txt
-          grep -F "package: name='com.mehmetdem.dil' versionCode='4'" apk-badging.txt
+          grep -F "package: name='com.mehmetdem.dil' versionCode='5'" apk-badging.txt
           grep -F "sdkVersion:'26'" apk-badging.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: uygulamam-dil-v0.3.1-preview-apk
+          name: uygulamam-dil-v0.4.0-preview-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -93,13 +93,13 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
-      RELEASE_TAG: phase-03.1-preview
-      APK_NAME: UygulamamDil-v0.3.1-preview.apk
+      RELEASE_TAG: phase-04-preview
+      APK_NAME: UygulamamDil-v0.4.0-preview.apk
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: uygulamam-dil-v0.3.1-preview-apk
+          name: uygulamam-dil-v0.4.0-preview-apk
           path: release
       - name: Prepare APK and checksum
         run: |
@@ -115,13 +115,13 @@ jobs:
           if ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
             gh release create "${RELEASE_TAG}" \
               --verify-tag \
-              --title "Uygulamam Dil — v0.3.1 Önizleme" \
-              --notes "Android 11 uyumlu, sabit test imzalı ve cihaz güvenli alanlarına göre hizalanmış doğrulanmış APK." \
+              --title "Uygulamam Dil — v0.4.0 Önizleme" \
+              --notes "DeepSeek ders işi, PDF/YouTube aktarımı, kalıcı kart checkpoint'i ve duraklat/devam/yeniden dene akışını içeren doğrulanmış önizleme APK'sı." \
               --prerelease
           else
             gh release edit "${RELEASE_TAG}" \
-              --title "Uygulamam Dil — v0.3.1 Önizleme" \
-              --notes "Android 11 uyumlu, sabit test imzalı ve cihaz güvenli alanlarına göre hizalanmış doğrulanmış APK." \
+              --title "Uygulamam Dil — v0.4.0 Önizleme" \
+              --notes "DeepSeek ders işi, PDF/YouTube aktarımı, kalıcı kart checkpoint'i ve duraklat/devam/yeniden dene akışını içeren doğrulanmış önizleme APK'sı." \
               --prerelease
           fi
           gh release upload "${RELEASE_TAG}" \

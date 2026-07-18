@@ -11,8 +11,10 @@ android {
         applicationId = "com.mehmetdem.dil"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.3.1-phase03"
+        versionCode = 5
+        versionName = "0.4.0-phase04"
+
+        buildConfigField("String", "API_BASE_URL", "\"https://uygulamam-dil-api.onrender.com\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -63,6 +65,7 @@ dependencies {
     implementation(project(":android:core:model"))
     implementation(project(":android:core:designsystem"))
     implementation(project(":android:core:data"))
+    implementation(project(":android:core:network"))
     implementation(project(":android:feature:home"))
     implementation(project(":android:feature:lesson"))
     implementation(project(":android:feature:library"))

@@ -51,6 +51,8 @@ import com.mehmetdem.dil.core.designsystem.DilTeal
 @Composable
 fun ProfileScreen(
     lessonCount: Int,
+    serverVerified: Boolean,
+    providerRequestCount: Int,
     onVoiceSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -130,7 +132,12 @@ fun ProfileScreen(
                     SettingRow(Icons.Filled.Language, "Uygulama dili", "Türkçe", DilBlueSoft)
                     SettingRow(Icons.Filled.FolderOpen, "Yerel kayıt", "$lessonCount ders", DilGreenSoft)
                     SettingRow(Icons.Filled.CloudOff, "Bulut senkronizasyonu", "Bağlı değil", Color(0xFFFFF1E5))
-                    SettingRow(Icons.Filled.AutoAwesome, "Yapay zekâ ve ses", "Sunucu bağlantısı bekleniyor", DilPurpleSoft)
+                    SettingRow(
+                        Icons.Filled.AutoAwesome,
+                        "Yapay zekâ ders üretimi",
+                        if (serverVerified) "Sunucu doğrulandı · $providerRequestCount istek kaydedildi" else "İlk ders oluşturulurken doğrulanacak",
+                        DilPurpleSoft,
+                    )
                 }
             }
             item {
@@ -151,7 +158,7 @@ fun ProfileScreen(
             }
             item {
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Uygulamam Dil v0.3.1", color = DilMuted, style = MaterialTheme.typography.bodyMedium)
+                    Text("Uygulamam Dil v0.4.0", color = DilMuted, style = MaterialTheme.typography.bodyMedium)
                     Text("Geliştirme sürümü", color = DilMuted, style = MaterialTheme.typography.bodyMedium)
                 }
             }

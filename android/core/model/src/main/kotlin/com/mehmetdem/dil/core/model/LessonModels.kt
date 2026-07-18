@@ -158,6 +158,9 @@ data class StoredLesson(
     val state: LessonJobState,
     val completedBlockCount: Int,
     val blocks: List<LessonBlock> = emptyList(),
+    val remoteJobId: String? = null,
+    val generationMetrics: LessonGenerationMetrics = LessonGenerationMetrics(),
+    val lastSyncError: String? = null,
     val createdAtEpochMillis: Long,
     val updatedAtEpochMillis: Long,
 ) {
@@ -168,6 +171,15 @@ data class StoredLesson(
         require(createdAtEpochMillis > 0 && updatedAtEpochMillis >= createdAtEpochMillis) { "Ders zamanı geçersiz." }
     }
 }
+
+data class LessonGenerationMetrics(
+    val providerRequestCount: Int = 0,
+    val inputTokens: Long = 0,
+    val outputTokens: Long = 0,
+    val totalTokens: Long = 0,
+    val providerLatencyMillis: Long = 0,
+    val estimatedCostMicroUsd: Long = 0,
+)
 
 data class LessonBlock(
     val index: Int,

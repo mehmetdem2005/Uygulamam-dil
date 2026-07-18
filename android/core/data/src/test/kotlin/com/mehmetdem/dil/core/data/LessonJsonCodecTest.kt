@@ -4,6 +4,7 @@ import com.mehmetdem.dil.core.model.ContentRange
 import com.mehmetdem.dil.core.model.LessonFormat
 import com.mehmetdem.dil.core.model.LessonBlock
 import com.mehmetdem.dil.core.model.LessonJobState
+import com.mehmetdem.dil.core.model.LessonGenerationMetrics
 import com.mehmetdem.dil.core.model.LessonSessionConfig
 import com.mehmetdem.dil.core.model.SourceKind
 import com.mehmetdem.dil.core.model.SourceSelection
@@ -34,6 +35,9 @@ class LessonJsonCodecTest {
                     fieldValues = mapOf("source_text" to "How are you?", "translation" to "Nasılsın?"),
                 ),
             ),
+            remoteJobId = "remote-job-1",
+            generationMetrics = LessonGenerationMetrics(providerRequestCount = 2, totalTokens = 340),
+            lastSyncError = "geçici bağlantı hatası",
             createdAtEpochMillis = 1_000,
             updatedAtEpochMillis = 2_000,
         )

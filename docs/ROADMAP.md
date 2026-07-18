@@ -49,7 +49,7 @@ ayrı `formatId` ve revision 1 ile başlar. Supabase format revision kayıtları
 Kabul: uygulama yeniden açıldığında yerel dersler tekrar API çağrısı yapılmadan listelenir; bağlı
 olmayan Supabase, abonelik, arka plan servisi veya kota arayüzde çalışıyormuş gibi gösterilmez.
 
-## Faz 4 — LLM orkestrasyonu
+## Faz 4 — LLM orkestrasyonu ✅
 
 - DeepSeek V4 Pro SSE
 - hızlı/kalite modu
@@ -58,6 +58,13 @@ olmayan Supabase, abonelik, arka plan servisi veya kota arayüzde çalışıyorm
 - token/istek/gecikme ölçümü
 
 Kabul: bağlantı kesilse de iş sunucuda tamamlanır ve blok çoğaltmaz.
+
+Uygulanan doğrulama: Android yalnız kısa ömürlü imzalı önizleme tokenı alır; sağlayıcı anahtarı
+APK'ya girmez. Her iş ve batch idempotency kimliğiyle kaydedilir, kartlar sıra numarasına göre
+tekilleştirilir ve her başarılı batch'ten sonra atomik dosya checkpoint'i yazılır. Mobil istemci
+bağlantı kesilince yeniden bağlanır, tamamlanan kartları yerel depoya yazar ve pause/resume/cancel/
+retry komutlarını gerçek API'ye gönderir. Render instance yeniden başlatmaları arasında kalıcı iş
+deposu Faz 7 Supabase adaptörüyle tamamlanacaktır.
 
 ## Faz 5 — Edge TTS
 

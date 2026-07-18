@@ -152,7 +152,11 @@ fun LessonDetailScreen(
                             color = DilMuted,
                         )
                         Text(
-                            "Kart içeriği sunucudan dönmeden örnek metin gösterilmez.",
+                            if (lesson.generationMetrics.providerRequestCount > 0) {
+                                "${lesson.generationMetrics.providerRequestCount} gerçek API isteği · ${lesson.generationMetrics.totalTokens} token"
+                            } else {
+                                "Kart içeriği sunucudan dönmeden örnek metin gösterilmez."
+                            },
                             color = DilMuted,
                             style = MaterialTheme.typography.bodyMedium,
                         )
@@ -254,7 +258,7 @@ private fun timeLabel(millis: Long): String {
 
 private fun jobStateLabel(state: LessonJobState): String = when (state) {
     LessonJobState.DRAFT -> "Taslak"
-    LessonJobState.CREATED -> "Cihaza kaydedildi"
+    LessonJobState.CREATED -> "Sunucu bağlantısı hazırlanıyor"
     LessonJobState.INGESTING -> "Kaynak işleniyor"
     LessonJobState.GENERATING -> "Kartlar hazırlanıyor"
     LessonJobState.PAUSED -> "İşlem duraklatıldı"
