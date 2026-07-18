@@ -51,6 +51,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.io.InputStream
 import java.io.OutputStream
+import java.security.MessageDigest
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -65,7 +66,9 @@ fun Application.module() {
     }
     val apiKey = System.getenv("DEEPSEEK_API_KEY").orEmpty()
     val developmentToken = System.getenv("DEVELOPMENT_API_TOKEN").orEmpty()
-    val previewTokenSecret = System.getenv("PREVIEW_TOKEN_SECRET").orEmpty()
+    val previewTokenSecret = System.getenv("PREVIEW_TOKEN_SECRET")
+        ?.takeIf(String::isNotBlank)
+        ?: developmentToken.takeIf(String::isNotBlank)?.let(::derivePreviewTokenSecret).orEmpty()
     val supabaseUrl = System.getenv("SUPABASE_URL").orEmpty()
     val supabaseServiceRoleKey = System.getenv("SUPABASE_SERVICE_ROLE_KEY").orEmpty()
     val gateway = apiKey.takeIf(String::isNotBlank)?.let {
@@ -347,6 +350,10 @@ private fun envInt(name: String, default: Int, range: IntRange): Int =
 
 private fun envLong(name: String, default: Long, range: LongRange): Long =
     (System.getenv(name)?.toLongOrNull() ?: default).also { require(it in range) { "$name değeri geçersiz." } }
+
+private fun derivePreviewTokenSecret(developmentToken: String): String = MessageDigest.getInstance("SHA-256")
+    .digest("uygulamam-dil-preview-session|$developmentToken".toByteArray(Charsets.UTF_8))
+    .joinToString("") { "%02x".format(it) }
 
 @Serializable
 private data class ApiError(val code: String, val message: String)
