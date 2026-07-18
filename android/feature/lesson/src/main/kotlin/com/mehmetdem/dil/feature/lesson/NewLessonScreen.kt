@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -299,7 +300,7 @@ private fun SourceChoiceCard(title: String, subtitle: String, icon: ImageVector,
 }
 
 @Composable
-private fun LabeledField(title: String, content: @Composable Column.() -> Unit) {
+private fun LabeledField(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         content()
@@ -567,7 +568,7 @@ private fun applyModePreset(mode: TeachingMode, fields: MutableList<EditableFiel
 }
 
 @Composable
-private fun DesignerCard(title: String, content: @Composable Column.() -> Unit) {
+private fun DesignerCard(title: String, content: @Composable ColumnScope.() -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, DilBorder), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
