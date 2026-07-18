@@ -34,6 +34,7 @@ class SourceIngestionService(
             val result = runner.run(
                 listOf(
                     "yt-dlp", "--skip-download", "--write-subs", "--write-auto-subs",
+                    "--js-runtimes", "node",
                     "--sub-langs", languageSelector, "--sub-format", "vtt",
                     "--no-playlist", "--output", outputTemplate,
                     "https://www.youtube.com/watch?v=${request.videoId}",

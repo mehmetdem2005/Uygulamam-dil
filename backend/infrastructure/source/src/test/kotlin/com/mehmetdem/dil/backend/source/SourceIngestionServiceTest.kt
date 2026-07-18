@@ -5,6 +5,7 @@ import com.mehmetdem.dil.backend.domain.SourceUnit
 import com.mehmetdem.dil.backend.domain.YouTubeIngestionRequest
 import java.nio.file.Files
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
 class SourceIngestionServiceTest {
@@ -12,6 +13,8 @@ class SourceIngestionServiceTest {
     fun `clips youtube cues to selected interval`() = kotlinx.coroutines.test.runTest {
         val root = Files.createTempDirectory("source-youtube-test")
         val runner = ExternalProcessRunner { command, _ ->
+            assertContains(command, "--js-runtimes")
+            assertEquals("node", command[command.indexOf("--js-runtimes") + 1])
             val template = command[command.indexOf("--output") + 1]
             Files.writeString(
                 java.nio.file.Path.of(template.replace("%(ext)s", "en.vtt")),
