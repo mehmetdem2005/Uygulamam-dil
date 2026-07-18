@@ -11,8 +11,8 @@ android {
         applicationId = "com.mehmetdem.dil"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0-phase01"
+        versionCode = 3
+        versionName = "0.3.0-phase03"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -46,8 +46,12 @@ android {
 dependencies {
     implementation(project(":android:core:model"))
     implementation(project(":android:core:designsystem"))
+    implementation(project(":android:core:data"))
     implementation(project(":android:feature:home"))
     implementation(project(":android:feature:lesson"))
+    implementation(project(":android:feature:library"))
+    implementation(project(":android:feature:profile"))
+    implementation(project(":android:feature:onboarding"))
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)

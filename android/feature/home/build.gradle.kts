@@ -22,6 +22,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":android:core:model"))
     implementation(project(":android:core:designsystem"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -31,4 +32,3 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
-

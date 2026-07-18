@@ -4,6 +4,9 @@ data class SourceSegment(
     val revisionId: String,
     val ordinal: Int,
     val text: String,
+    val unit: SourceUnit = SourceUnit.TEXT,
+    val startInclusive: Long? = null,
+    val endExclusive: Long? = null,
 )
 
 data class LessonGenerationPlan(
@@ -16,6 +19,7 @@ data class LessonGenerationPlan(
     val totalBlockCount: Int,
     val blocksPerRequest: Int,
     val thinkingEnabled: Boolean,
+    val outputSchemaJson: String? = null,
 )
 
 data class GenerationBatch(
@@ -25,4 +29,3 @@ data class GenerationBatch(
     val sourceText: String,
     val modelRequest: ModelGenerationRequest,
 )
-

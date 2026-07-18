@@ -14,7 +14,7 @@ Her faz derlenebilir durumda kapanır. Sonraki faz için geçici demo kodu ana d
 
 Kabul: temiz checkout CI üzerinde testleri geçer ve kurulabilir debug APK artifact üretir.
 
-## Faz 2 — Kaynak alımı
+## Faz 2 — Kaynak alımı ✅
 
 - Android PDF belge seçici ve kalıcı URI izni
 - YouTube URL/video kimliği doğrulama ve gömülü oynatıcı
@@ -24,7 +24,7 @@ Kabul: temiz checkout CI üzerinde testleri geçer ve kurulabilir debug APK arti
 
 Kabul: seçilen aralıktan deterministik `SourceSegment` kayıtları oluşur.
 
-## Faz 3 — Format tasarımcısı
+## Faz 3 — Format tasarımcısı ✅
 
 - alan ekleme/silme/sıralama
 - dil, seviye, öğretim yöntemi ve özel talimat
@@ -33,6 +33,21 @@ Kabul: seçilen aralıktan deterministik `SourceSegment` kayıtları oluşur.
 - format sürümleme, kopyalama ve JSON Schema derleme
 
 Kabul: aynı format aynı alan şemasını üretir; eski dersler yeni düzenlemeden etkilenmez.
+
+Uygulanan doğrulama: alanlar konum ve anahtara göre kanonik sıralanır; derlenen JSON Schema
+SHA-256 kimliğiyle saklanır. Düzenleme mevcut kaydı değiştirmez, yeni revision üretir. Kopyalama
+ayrı `formatId` ve revision 1 ile başlar. Supabase format revision kayıtları update/delete'e kapalıdır.
+
+### Faz 3 sağlamlaştırma — yerel gerçek veri ✅
+
+- sabit ders/eğitmen/profil/premium/kota örnekleri kaldırıldı
+- ana sayfa, kütüphane ve ders ayrıntısı aynı kalıcı yerel kaydı kullanır
+- ders ayarıyla birlikte üretilmiş kart listesi de JSON olarak cihazda saklanabilir
+- arama, kaynak filtresi, silme onayı, ders açma ve dil seçimi gerçek durum değiştirir
+- mikrofon ekranı yalnız gerçekten dinlerken dinleme durumu gösterir
+
+Kabul: uygulama yeniden açıldığında yerel dersler tekrar API çağrısı yapılmadan listelenir; bağlı
+olmayan Supabase, abonelik, arka plan servisi veya kota arayüzde çalışıyormuş gibi gösterilmez.
 
 ## Faz 4 — LLM orkestrasyonu
 
@@ -98,4 +113,3 @@ Kabul: tüm metrikler sunucu olaylarından yeniden hesaplanabilir ve özel içer
 - Crash/ANR, baseline profile, R8 ve release runbook
 
 Kabul: sürüm adayı otomatik pipeline ile üretilir, rollback ve veri kurtarma denenmiştir.
-

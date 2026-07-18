@@ -3,7 +3,7 @@ services:
     name: uygulamam-dil-api
     runtime: docker
     repo: https://github.com/mehmetdem2005/Uygulamam-dil
-    branch: agent/phase-01-foundation
+    branch: agent/phase-03-format-designer
     plan: free
     region: frankfurt
     numInstances: 1
@@ -36,7 +36,7 @@ services:
     name: uygulamam-dil-edge-tts
     runtime: docker
     repo: https://github.com/mehmetdem2005/Uygulamam-dil
-    branch: agent/phase-01-foundation
+    branch: agent/phase-03-format-designer
     plan: free
     region: frankfurt
     numInstances: 1

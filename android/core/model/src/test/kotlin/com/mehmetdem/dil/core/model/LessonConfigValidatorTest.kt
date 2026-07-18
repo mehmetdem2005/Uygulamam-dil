@@ -2,6 +2,7 @@ package com.mehmetdem.dil.core.model
 
 import kotlin.test.Test
 import kotlin.test.assertTrue
+import kotlin.test.assertEquals
 
 class LessonConfigValidatorTest {
     @Test
@@ -20,5 +21,21 @@ class LessonConfigValidatorTest {
         )
 
         assertTrue(LessonConfigValidator.validate(config).isEmpty())
+    }
+
+    @Test
+    fun `copying a format starts a separate revision history`() {
+        val source = LessonFormat(
+            formatId = "original",
+            revision = 4,
+            title = "Dil öğret",
+            instruction = "Cümleyi göster ve anlaşılır biçimde çevir.",
+        )
+
+        val copied = source.copyAsNew("copy")
+
+        assertEquals("copy", copied.formatId)
+        assertEquals(1, copied.revision)
+        assertEquals(listOf(0, 1), copied.orderedFields().map { it.position })
     }
 }

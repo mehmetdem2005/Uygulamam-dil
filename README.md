@@ -7,12 +7,15 @@ Bu depo tek kullanımlık bir prototip değildir. Android istemcisi, sunucu, LLM
 ## Faz durumu
 
 - Faz 1: üretim mimarisi, native Android kabuğu, tasarım sistemi, menüler, ders oluşturma formu, ders çalışma alanı, domain doğrulaması ve CI temeli
-- Render: gerçek API ve Edge TTS servisleri Frankfurt bölgesinde oluşturuldu
-- Supabase: Frankfurt projesi, Auth şeması, RLS politikaları ve özel Storage bucket'ları bağlı
-- DeepSeek V4 Pro: anahtar yalnızca sunucuda kullanılan gerçek sağlayıcı adaptörü
-- Edge TTS: ayrı Python servisi; üretilen sesler sonraki fazda içerik karmasıyla önbelleklenecek
+- Faz 2: YouTube altyazı alımı, zaman kırpma, PDF sayfa çıkarma ve Türkçe/İngilizce OCR yedeği
+- Faz 3: alan ekleme/silme/sıralama, öğretim modu, kart ayarları, canlı önizleme, değişmez format sürümleri ve deterministik JSON Schema
+- Yerel kayıt: oluşturulan ders ayarı ve üretilmiş kart modeli cihazda kalıcı olarak saklanır; sahte ders, profil, abonelik ve depolama kotası gösterilmez
+- Mikrofon: Android konuşma tanıma ile ekran açıkken gerçek izin ve komut testi çalışır
+- Render ve Supabase: altyapı/migration dosyaları hazırdır; canlı bağlantı doğrulanmadan arayüzde bağlı gösterilmez
+- DeepSeek V4 Pro: sunucu adaptörü hazırdır; gizli anahtar APK içine konmaz ve mobil orkestrasyon Faz 4'te bağlanır
+- Edge TTS: ayrı Python servisidir; Android oynatma ve ses önbelleği Faz 5'te bağlanır
 
-Ayrıntılı kararlar için [mimari belgesine](docs/ARCHITECTURE.md), teslim sırası için [10 fazlık yol haritasına](docs/ROADMAP.md) bakın.
+Ayrıntılı kararlar için [mimari belgesine](docs/ARCHITECTURE.md), teslim sırası için [10 fazlık yol haritasına](docs/ROADMAP.md), ekran oranları için [mobil arayüz ölçü sözleşmesine](docs/UI_SPEC.md) bakın.
 
 ## Depo yapısı
 
@@ -23,10 +26,14 @@ android/
   core/designsystem/         Renk, tipografi ve ortak Compose bileşenleri
   feature/home/              Ana sayfa
   feature/lesson/            Kaynak/format ayarı ve ders çalışma alanı
+  feature/library/           Gerçek yerel kayıtları arayan/filtreleyen ders kütüphanesi
+  feature/profile/           Bağlantı durumu ve gerçek mikrofon komut testi
+  feature/onboarding/        Tanıtım ve Android izin akışı
 backend/
   domain/                    Sunucu domain portları
   application/               İş akışı ve orkestrasyon
   infrastructure/deepseek/   DeepSeek V4 Pro istemcisi
+  infrastructure/source/     YouTube transcript, PDF text ve OCR zinciri
   infrastructure/supabase/   Supabase bağlantı ve sağlık adaptörü
   api/                       Render üzerinde çalışacak Ktor API
 services/edge-tts/            Edge TTS mikroservisi
@@ -41,7 +48,7 @@ Gereksinimler: JDK 17 ve Android SDK 36. Gradle 9.4.1, SHA-256 doğrulamalı wra
 
 ```bash
 ./gradlew :android:app:assembleDebug
-./gradlew :android:core:model:test :backend:application:test
+./gradlew :android:core:model:test :android:core:data:test :backend:application:test
 ```
 
 APK, `android/app/build/outputs/apk/debug/app-debug.apk` altında oluşur. Aynı komut GitHub Actions tarafından çalıştırılır ve APK artifact olarak yayımlanır.
