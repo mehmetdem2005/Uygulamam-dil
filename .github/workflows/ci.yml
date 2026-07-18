@@ -26,7 +26,7 @@ jobs:
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
       - name: Test domain and backend
-        run: ./gradlew --no-daemon :android:core:model:test :backend:application:test :backend:api:build
+        run: ./gradlew --no-daemon :android:core:model:test :android:core:data:test :backend:application:test :backend:infrastructure:source:test :backend:api:build
 
   android-apk:
     name: Android debug APK
@@ -46,7 +46,7 @@ jobs:
         run: ./gradlew --no-daemon :android:app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: uygulamam-dil-phase01-debug-apk
+          name: uygulamam-dil-phase03-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -70,7 +70,7 @@ jobs:
 
   publish-preview-apk:
     name: Publish preview APK
-    if: github.event_name == 'push' && github.ref == 'refs/heads/agent/phase-01-foundation'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/agent/phase-03-format-designer'
     needs: [kotlin-tests, android-apk, edge-tts-tests]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -78,13 +78,13 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
-      RELEASE_TAG: phase-01-preview
-      APK_NAME: UygulamamDil-phase01-debug.apk
+      RELEASE_TAG: phase-03-preview
+      APK_NAME: UygulamamDil-phase03-debug.apk
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: uygulamam-dil-phase01-debug-apk
+          name: uygulamam-dil-phase03-debug-apk
           path: release
       - name: Prepare APK and checksum
         run: |
@@ -95,8 +95,8 @@ jobs:
           if ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
             gh release create "${RELEASE_TAG}" \
               --target "${GITHUB_SHA}" \
-              --title "Uygulamam Dil — Faz 01 Önizleme" \
-              --notes "Native Android Faz 01 doğrulanmış debug APK önizlemesi." \
+              --title "Uygulamam Dil — Faz 03 Önizleme" \
+              --notes "Responsive arayüz, kaynak alımı ve sürümlü format tasarımcısı içeren doğrulanmış debug APK." \
               --prerelease
           fi
           gh release upload "${RELEASE_TAG}" \

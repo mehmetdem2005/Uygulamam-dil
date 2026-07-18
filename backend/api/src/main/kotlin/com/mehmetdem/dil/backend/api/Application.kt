@@ -2,8 +2,17 @@ package com.mehmetdem.dil.backend.api
 
 import com.mehmetdem.dil.backend.deepseek.DeepSeekConfig
 import com.mehmetdem.dil.backend.deepseek.DeepSeekModelGateway
+import com.mehmetdem.dil.backend.application.FormatSchemaCompiler
+import com.mehmetdem.dil.backend.domain.FormatFieldDefinition
+import com.mehmetdem.dil.backend.domain.FormatFieldKind
+import com.mehmetdem.dil.backend.domain.FormatTeachingMode
+import com.mehmetdem.dil.backend.domain.LessonFormatDefinition
 import com.mehmetdem.dil.backend.domain.ModelGenerationRequest
 import com.mehmetdem.dil.backend.domain.ModelStreamEvent
+import com.mehmetdem.dil.backend.domain.PdfIngestionRequest
+import com.mehmetdem.dil.backend.domain.SourceSegment
+import com.mehmetdem.dil.backend.domain.YouTubeIngestionRequest
+import com.mehmetdem.dil.backend.source.SourceIngestionService
 import com.mehmetdem.dil.backend.supabase.SupabaseConfig
 import com.mehmetdem.dil.backend.supabase.SupabaseHealthGateway
 import io.ktor.http.ContentType
@@ -19,15 +28,22 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.header
 import io.ktor.server.request.receive
+import io.ktor.server.request.receiveMultipart
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondTextWriter
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.flow.collect
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
+import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.nio.file.Files
+import java.io.InputStream
+import java.io.OutputStream
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -53,6 +69,8 @@ fun Application.module() {
             ),
         )
     }
+    val sourceGateway = SourceIngestionService()
+    val formatCompiler = FormatSchemaCompiler()
     val supabaseGateway = if (supabaseUrl.isNotBlank() && supabaseServiceRoleKey.isNotBlank()) {
         SupabaseHealthGateway(
             SupabaseConfig(
@@ -67,6 +85,12 @@ fun Application.module() {
     install(ContentNegotiation) { json(json) }
     install(CallLogging)
     install(StatusPages) {
+        exception<DevelopmentUnauthorizedException> { call, cause ->
+            call.respond(HttpStatusCode.Unauthorized, ApiError("unauthorized", cause.message ?: "Unauthorized"))
+        }
+        exception<ServiceNotConfiguredException> { call, cause ->
+            call.respond(HttpStatusCode.ServiceUnavailable, ApiError("service_not_configured", cause.message ?: "Service unavailable"))
+        }
         exception<IllegalArgumentException> { call, cause ->
             call.respond(HttpStatusCode.BadRequest, ApiError("invalid_request", cause.message ?: "Invalid request"))
         }
@@ -146,8 +170,102 @@ fun Application.module() {
                 }
             }
         }
+
+        post("/v1/development/sources/youtube:ingest") {
+            requireDevelopmentToken(call.request.header("X-Development-Token"), developmentToken)
+            val request = call.receive<YouTubeSourceRequest>()
+            val segments = sourceGateway.ingestYouTube(
+                YouTubeIngestionRequest(
+                    videoId = request.videoId,
+                    startMillis = request.startMillis,
+                    endMillisExclusive = request.endMillisExclusive,
+                    preferredLanguages = request.preferredLanguages,
+                ),
+            )
+            call.respond(SourceSegmentsResponse(segments.map(SourceSegment::toResponse)))
+        }
+
+        post("/v1/development/sources/pdf:ingest") {
+            requireDevelopmentToken(call.request.header("X-Development-Token"), developmentToken)
+            val tempFile = Files.createTempFile("source-upload-", ".pdf")
+            var startPage: Int? = null
+            var endPage: Int? = null
+            var fileReceived = false
+            try {
+                call.receiveMultipart(formFieldLimit = 50L * 1024L * 1024L).forEachPart { part ->
+                    when (part) {
+                        is PartData.FormItem -> when (part.name) {
+                            "startPage" -> startPage = part.value.toIntOrNull()
+                            "endPage" -> endPage = part.value.toIntOrNull()
+                        }
+                        is PartData.FileItem -> if (part.name == "file" && !fileReceived) {
+                            part.provider().toInputStream().use { input ->
+                                Files.newOutputStream(tempFile).use { output -> copyWithLimit(input, output, 50L * 1024L * 1024L) }
+                            }
+                            fileReceived = true
+                        }
+                        else -> Unit
+                    }
+                    part.dispose()
+                }
+                require(fileReceived) { "PDF dosyası gereklidir." }
+                val segments = sourceGateway.ingestPdf(
+                    PdfIngestionRequest(
+                        filePath = tempFile.toString(),
+                        startPage = requireNotNull(startPage) { "startPage gereklidir." },
+                        endPageInclusive = requireNotNull(endPage) { "endPage gereklidir." },
+                    ),
+                )
+                call.respond(SourceSegmentsResponse(segments.map(SourceSegment::toResponse)))
+            } finally {
+                Files.deleteIfExists(tempFile)
+            }
+        }
+
+        post("/v1/development/formats:compile") {
+            requireDevelopmentToken(call.request.header("X-Development-Token"), developmentToken)
+            val request = call.receive<CompileFormatRequest>()
+            val compiled = formatCompiler.compile(request.toDomain())
+            call.respond(
+                CompileFormatResponse(
+                    formatId = compiled.formatId,
+                    revision = compiled.revision,
+                    schemaJson = compiled.schemaJson,
+                    sha256 = compiled.sha256,
+                ),
+            )
+        }
     }
 }
+
+private fun requireDevelopmentToken(provided: String?, configured: String) {
+    if (configured.isBlank()) throw ServiceNotConfiguredException("Development authentication is not configured")
+    if (provided != configured) throw DevelopmentUnauthorizedException("Invalid development token")
+}
+
+private class DevelopmentUnauthorizedException(message: String) : RuntimeException(message)
+private class ServiceNotConfiguredException(message: String) : RuntimeException(message)
+
+private fun copyWithLimit(input: InputStream, output: OutputStream, maxBytes: Long) {
+    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+    var total = 0L
+    while (true) {
+        val read = input.read(buffer)
+        if (read < 0) break
+        total += read
+        require(total <= maxBytes) { "PDF dosyası 50 MB sınırını aşıyor." }
+        output.write(buffer, 0, read)
+    }
+}
+
+private fun SourceSegment.toResponse() = SourceSegmentResponse(
+    revisionId = revisionId,
+    ordinal = ordinal,
+    text = text,
+    unit = unit.name.lowercase(),
+    startInclusive = startInclusive,
+    endExclusive = endExclusive,
+)
 
 @Serializable
 private data class HealthResponse(
@@ -179,4 +297,87 @@ private data class SsePayload(
     val inputTokens: Long? = null,
     val outputTokens: Long? = null,
     val totalTokens: Long? = null,
+)
+
+@Serializable
+private data class YouTubeSourceRequest(
+    val videoId: String,
+    val startMillis: Long,
+    val endMillisExclusive: Long,
+    val preferredLanguages: List<String> = listOf("tr", "en"),
+)
+
+@Serializable
+private data class SourceSegmentsResponse(val segments: List<SourceSegmentResponse>)
+
+@Serializable
+private data class SourceSegmentResponse(
+    val revisionId: String,
+    val ordinal: Int,
+    val text: String,
+    val unit: String,
+    val startInclusive: Long? = null,
+    val endExclusive: Long? = null,
+)
+
+@Serializable
+private data class CompileFormatRequest(
+    val formatId: String,
+    val revision: Int = 1,
+    val title: String,
+    val instruction: String,
+    val teachingMode: String,
+    val teachingLanguage: String,
+    val targetLanguage: String,
+    val learnerLevel: String,
+    val fields: List<FormatFieldRequest>,
+    val totalBlockCount: Int,
+    val blocksPerRequest: Int,
+    val requestIntervalSeconds: Int,
+    val cardWidthFraction: Float,
+) {
+    fun toDomain() = LessonFormatDefinition(
+        formatId = formatId,
+        revision = revision,
+        title = title,
+        instruction = instruction,
+        teachingMode = FormatTeachingMode.valueOf(teachingMode.uppercase()),
+        teachingLanguage = teachingLanguage,
+        targetLanguage = targetLanguage,
+        learnerLevel = learnerLevel,
+        fields = fields.mapIndexed { index, field -> field.toDomain(index) },
+        totalBlockCount = totalBlockCount,
+        blocksPerRequest = blocksPerRequest,
+        requestIntervalSeconds = requestIntervalSeconds,
+        cardWidthFraction = cardWidthFraction,
+    )
+}
+
+@Serializable
+private data class FormatFieldRequest(
+    val key: String,
+    val label: String,
+    val kind: String = "short_text",
+    val required: Boolean = true,
+    val visible: Boolean = true,
+    val speakable: Boolean = false,
+    val position: Int? = null,
+) {
+    fun toDomain(fallbackPosition: Int) = FormatFieldDefinition(
+        key = key,
+        label = label,
+        kind = FormatFieldKind.valueOf(kind.uppercase()),
+        required = required,
+        visible = visible,
+        speakable = speakable,
+        position = position ?: fallbackPosition,
+    )
+}
+
+@Serializable
+private data class CompileFormatResponse(
+    val formatId: String,
+    val revision: Int,
+    val schemaJson: String,
+    val sha256: String,
 )

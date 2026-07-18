@@ -1,349 +1,318 @@
 package com.mehmetdem.dil.feature.lesson
 
+import android.annotation.SuppressLint
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.mehmetdem.dil.core.designsystem.DilElevatedCard
-import com.mehmetdem.dil.core.designsystem.DilSectionHeader
-import com.mehmetdem.dil.core.designsystem.DilStatusPill
+import androidx.compose.ui.viewinterop.AndroidView
+import com.mehmetdem.dil.core.designsystem.DilBlueSoft
+import com.mehmetdem.dil.core.designsystem.DilBorder
+import com.mehmetdem.dil.core.designsystem.DilGreenSoft
+import com.mehmetdem.dil.core.designsystem.DilMaxContentWidth
+import com.mehmetdem.dil.core.designsystem.DilMuted
+import com.mehmetdem.dil.core.designsystem.DilOuterPadding
+import com.mehmetdem.dil.core.designsystem.DilTeal
 import com.mehmetdem.dil.core.model.ContentRange
 import com.mehmetdem.dil.core.model.LessonBlock
-import com.mehmetdem.dil.core.model.LessonSessionConfig
+import com.mehmetdem.dil.core.model.LessonJobState
 import com.mehmetdem.dil.core.model.SourceKind
-import com.mehmetdem.dil.core.model.TimecodeParser
-import kotlin.math.roundToInt
+import com.mehmetdem.dil.core.model.StoredLesson
+import com.mehmetdem.dil.core.model.YouTubeVideoIdParser
+import kotlin.math.ceil
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LessonWorkspaceScreen(
-    config: LessonSessionConfig,
+    lesson: StoredLesson,
     blocks: List<LessonBlock>,
-    isRunning: Boolean,
     onBack: () -> Unit,
-    onPause: () -> Unit,
-    onResume: () -> Unit,
-    onStop: () -> Unit,
-    onMore: () -> Unit,
+    onOpenDetails: () -> Unit,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var cardWidth by remember(config.format.cardWidthFraction) {
-        mutableFloatStateOf(config.format.cardWidthFraction)
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val requestTotal = ceil(lesson.config.format.totalBlockCount.toDouble() / lesson.config.format.blocksPerRequest).toInt()
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Dersi sil?") },
+            text = { Text("Cihazdaki ders kaydı ve ilerleme bilgisi kaldırılacak.") },
+            confirmButton = {
+                TextButton(onClick = { showDeleteDialog = false; onDelete() }) {
+                    Text("Sil", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Vazgeç") } },
+        )
     }
 
-    Scaffold(
-        modifier = modifier,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(config.format.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onMore) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = "Ders menüsü")
-                    }
-                },
-            )
-        },
-    ) { innerPadding ->
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.fillMaxWidth().widthIn(max = DilMaxContentWidth),
+            contentPadding = PaddingValues(horizontal = DilOuterPadding, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { SourceStage(config = config) }
-
             item {
-                SessionControlBar(
-                    isRunning = isRunning,
-                    completed = blocks.size,
-                    total = config.format.totalBlockCount,
-                    onPause = onPause,
-                    onResume = onResume,
-                    onStop = onStop,
-                )
-            }
-
-            item {
-                DilElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text("Kart genişliği", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "%${(cardWidth * 100).roundToInt()}",
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
-                    Slider(
-                        value = cardWidth,
-                        onValueChange = { cardWidth = it },
-                        valueRange = 0.72f..1f,
-                        steps = 6,
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Geri") }
+                    Text("▣", color = DilTeal, style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        "  Öğrenme Oturumu",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f),
                     )
-                }
-            }
-
-            item {
-                DilSectionHeader(
-                    title = "Öğretim kartları",
-                    action = {
-                        DilStatusPill(label = "${blocks.size}/${config.format.totalBlockCount}")
-                    },
-                )
-            }
-
-            if (blocks.isEmpty()) {
-                item {
-                    PendingLessonCard(isRunning = isRunning, widthFraction = cardWidth)
-                }
-            } else {
-                items(blocks, key = { it.index }) { block ->
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        LessonBlockCard(
-                            block = block,
-                            modifier = Modifier.fillMaxWidth(cardWidth),
-                        )
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(Icons.Filled.DeleteOutline, "Dersi sil", tint = MaterialTheme.colorScheme.error)
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun SourceStage(config: LessonSessionConfig) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(16f / 9f),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF171820)),
-    ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Icon(
-                    imageVector = if (config.source.kind == SourceKind.YOUTUBE) Icons.Filled.PlayCircle else Icons.Filled.Description,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(62.dp),
-                )
-                Text(
-                    text = config.source.displayName,
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = rangeLabel(config.source.range),
-                    color = Color.White.copy(alpha = 0.72f),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+            item { RequestStatusCard(lesson, blocks.size, requestTotal) }
+            item { SourceSummary(lesson) }
+            if (blocks.isEmpty()) {
+                item { EmptyResultCard(lesson.state) }
+            } else {
+                items(blocks, key = LessonBlock::index) { block -> GeneratedCard(lesson, block) }
             }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        shape = RoundedCornerShape(13.dp),
+                    ) {
+                        Icon(Icons.Filled.DeleteOutline, null)
+                        Text("Sil", modifier = Modifier.padding(start = 6.dp))
+                    }
+                    Button(
+                        onClick = onOpenDetails,
+                        modifier = Modifier.weight(1.8f).height(52.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = DilTeal),
+                        shape = RoundedCornerShape(13.dp),
+                    ) {
+                        Text("Ders Ayrıntıları")
+                        Icon(Icons.Filled.OpenInNew, null, modifier = Modifier.padding(start = 6.dp))
+                    }
+                }
+            }
+            item { Spacer(Modifier.height(8.dp)) }
         }
     }
 }
 
 @Composable
-private fun SessionControlBar(
-    isRunning: Boolean,
-    completed: Int,
-    total: Int,
-    onPause: () -> Unit,
-    onResume: () -> Unit,
-    onStop: () -> Unit,
-) {
-    DilElevatedCard(modifier = Modifier.fillMaxWidth()) {
+private fun RequestStatusCard(lesson: StoredLesson, completedCards: Int, requestTotal: Int) {
+    val running = lesson.state == LessonJobState.INGESTING || lesson.state == LessonJobState.GENERATING
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, DilBorder),
+        shape = RoundedCornerShape(16.dp),
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            Modifier.fillMaxWidth().padding(13.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = if (isRunning) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
+            Box(Modifier.size(40.dp).background(DilBlueSoft, RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
+                Icon(if (running) Icons.Filled.Sync else Icons.Filled.CheckCircle, null, tint = DilTeal)
             }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    if (isRunning) "Ders hazırlanıyor" else "Ders duraklatıldı",
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    "$completed / $total kart işlendi",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+            Column(Modifier.weight(1f)) {
+                Text("${completedCards.coerceAtMost(requestTotal)} / $requestTotal istek sonucu", fontWeight = FontWeight.Bold)
+                Text(workspaceStateText(lesson.state), color = DilMuted)
             }
-            IconButton(onClick = if (isRunning) onPause else onResume) {
-                Icon(
-                    imageVector = if (isRunning) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = if (isRunning) "Duraklat" else "Devam et",
-                )
-            }
-            IconButton(onClick = onStop) {
-                Icon(Icons.Filled.Stop, contentDescription = "Durdur")
-            }
-        }
-        LinearProgressIndicator(
-            progress = { if (total == 0) 0f else completed.toFloat() / total },
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-}
-
-@Composable
-private fun PendingLessonCard(isRunning: Boolean, widthFraction: Float) {
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        DilElevatedCard(modifier = Modifier.fillMaxWidth(widthFraction)) {
-            Text(
-                if (isRunning) "İlk kart bekleniyor" else "Üretim henüz başlatılmadı",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                if (isRunning) {
-                    "DeepSeek'ten gelen ilk içerik parçası burada akış halinde görünecek ve tamamlanınca kaydedilecek."
-                } else {
-                    "Dersi devam ettirdiğinde sıradaki eksik karttan başlanır."
-                },
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (isRunning) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            Text(if (running) "● İşleniyor" else "● Kaydedildi", color = if (running) Color(0xFF168CC0) else Color(0xFF16A56D))
         }
     }
 }
 
 @Composable
-fun LessonBlockCard(
-    block: LessonBlock,
-    modifier: Modifier = Modifier,
-) {
+private fun SourceSummary(lesson: StoredLesson) {
     Card(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, DilBorder),
+        shape = RoundedCornerShape(16.dp),
     ) {
-        Column {
+        if (lesson.config.source.kind == SourceKind.YOUTUBE) YouTubeEmbed(lesson) else {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                Modifier.fillMaxWidth().height(88.dp).padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
-                    block.title ?: "Kart ${block.index + 1}",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "Kartı sesli oku")
-            }
-            HorizontalDivider()
-            block.sourceText?.takeIf(String::isNotBlank)?.let {
-                LessonTableRow(label = "Kaynak", value = it)
-                HorizontalDivider()
-            }
-            LessonTableRow(label = "Öğren", value = block.targetText, emphasized = true)
-            block.translation?.takeIf(String::isNotBlank)?.let {
-                HorizontalDivider()
-                LessonTableRow(label = "Anlam", value = it)
-            }
-            block.pronunciation?.takeIf(String::isNotBlank)?.let {
-                HorizontalDivider()
-                LessonTableRow(label = "IPA", value = it)
-            }
-            block.explanation?.takeIf(String::isNotBlank)?.let {
-                HorizontalDivider()
-                LessonTableRow(label = "Açıklama", value = it)
+                Box(Modifier.size(52.dp).background(DilBlueSoft, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Description, null, tint = Color(0xFF1478F2))
+                }
+                Column {
+                    Text(lesson.config.source.displayName, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(rangeText(lesson.config.source.range), color = DilMuted)
+                }
             }
         }
     }
 }
 
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
-private fun LessonTableRow(label: String, value: String, emphasized: Boolean = false) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(5.dp),
+private fun YouTubeEmbed(lesson: StoredLesson) {
+    val videoId = YouTubeVideoIdParser.parse(lesson.config.source.locator)
+    val range = lesson.config.source.range as? ContentRange.Time
+    if (videoId == null || range == null) return
+    val start = range.startMillis / 1_000
+    val end = range.endMillisExclusive / 1_000
+    AndroidView(
+        modifier = Modifier.fillMaxWidth().height(190.dp),
+        factory = { context ->
+            WebView(context).apply {
+                settings.javaScriptEnabled = true
+                settings.mediaPlaybackRequiresUserGesture = true
+                webViewClient = WebViewClient()
+                loadDataWithBaseURL(
+                    "https://www.youtube.com",
+                    """<html><body style='margin:0;background:#111827'><iframe width='100%' height='100%' src='https://www.youtube.com/embed/$videoId?start=$start&end=$end&playsinline=1' frameborder='0' allow='accelerometer; encrypted-media' allowfullscreen></iframe></body></html>""",
+                    "text/html",
+                    "UTF-8",
+                    null,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun EmptyResultCard(state: LessonJobState) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = DilBlueSoft.copy(alpha = .28f)),
+        border = BorderStroke(1.dp, Color(0xFFCBE3F0)),
+        shape = RoundedCornerShape(16.dp),
     ) {
-        Text(
-            text = label.uppercase(),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = value,
-            style = if (emphasized) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge,
-            fontWeight = if (emphasized) FontWeight.SemiBold else FontWeight.Normal,
-        )
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(Icons.Filled.Info, null, tint = DilTeal, modifier = Modifier.size(38.dp))
+            Text("Henüz oluşturulmuş kart yok", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text(
+                if (state == LessonJobState.CREATED) {
+                    "Ders ayarları cihazda kaydedildi. Android uygulaması sunucu API'sine bağlanmadan işlem başladı olarak gösterilmez."
+                } else {
+                    workspaceStateText(state)
+                },
+                color = DilMuted,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
     }
 }
 
-private fun rangeLabel(range: ContentRange): String = when (range) {
-    is ContentRange.Time -> "${TimecodeParser.formatMillis(range.startMillis)} – ${TimecodeParser.formatMillis(range.endMillisExclusive)}"
-    is ContentRange.Pages -> "${range.startPage}. – ${range.endPageInclusive}. sayfa"
+@Composable
+private fun GeneratedCard(lesson: StoredLesson, block: LessonBlock) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, DilBorder),
+        shape = RoundedCornerShape(16.dp),
+    ) {
+        Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Kart ${block.index + 1}",
+                    color = DilTeal,
+                    modifier = Modifier.background(DilGreenSoft, RoundedCornerShape(7.dp)).padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Icon(Icons.Filled.CheckCircle, null, tint = Color(0xFF15A368), modifier = Modifier.size(18.dp))
+                    Text("Kaydedildi", color = Color(0xFF15A368))
+                }
+            }
+            lesson.config.format.orderedFields().forEach { field ->
+                val value = block.fieldValues[field.key] ?: when (field.key) {
+                    "source_text" -> block.sourceText
+                    "translation" -> block.translation
+                    "explanation" -> block.explanation
+                    "pronunciation" -> block.pronunciation
+                    else -> null
+                }
+                if (!value.isNullOrBlank()) {
+                    Text(field.label, color = DilMuted, style = MaterialTheme.typography.labelLarge)
+                    Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            if (block.fieldValues.isEmpty() && block.targetText.isNotBlank()) {
+                Text(block.targetText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            }
+            LinearProgressIndicator(
+                progress = { 1f },
+                modifier = Modifier.fillMaxWidth().height(4.dp),
+                color = DilTeal,
+                trackColor = DilBorder,
+            )
+        }
+    }
+}
+
+private fun workspaceStateText(state: LessonJobState): String = when (state) {
+    LessonJobState.DRAFT -> "Taslak"
+    LessonJobState.CREATED -> "Ders ayarları cihazda saklandı"
+    LessonJobState.INGESTING -> "Kaynak sunucuda işleniyor"
+    LessonJobState.GENERATING -> "Ders kartları hazırlanıyor"
+    LessonJobState.PAUSED -> "İşlem duraklatıldı"
+    LessonJobState.READY -> "Ders hazır"
+    LessonJobState.FAILED -> "İşlem başarısız"
+    LessonJobState.CANCELLED -> "İşlem durduruldu"
+}
+
+private fun rangeText(range: ContentRange): String = when (range) {
+    is ContentRange.Time -> "${timeText(range.startMillis)}–${timeText(range.endMillisExclusive)}"
+    is ContentRange.Pages -> "${range.startPage}–${range.endPageInclusive}. sayfalar"
+}
+
+private fun timeText(millis: Long): String {
+    val seconds = millis / 1_000
+    return "%02d:%02d".format(seconds / 60, seconds % 60)
 }

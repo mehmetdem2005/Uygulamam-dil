@@ -35,6 +35,15 @@ object LessonConfigValidator {
         if (format.instruction.trim().length < 10) {
             add(ValidationIssue("instruction", "Öğretim talimatı en az 10 karakter olmalıdır."))
         }
+        if (format.fields.size !in 1..8) {
+            add(ValidationIssue("fields", "Formatta 1 ile 8 arasında kart alanı bulunmalıdır."))
+        }
+        if (format.fields.map { it.key }.distinct().size != format.fields.size) {
+            add(ValidationIssue("fields", "Kart alanlarının anahtarları benzersiz olmalıdır."))
+        }
+        if (format.fields.map { it.position }.distinct().size != format.fields.size) {
+            add(ValidationIssue("fields", "Kart alanlarının sıraları benzersiz olmalıdır."))
+        }
         if (format.totalBlockCount !in 1..100) {
             add(ValidationIssue("totalBlockCount", "Kart sayısı 1 ile 100 arasında olmalıdır."))
         }
@@ -44,6 +53,9 @@ object LessonConfigValidator {
         if (format.blocksPerRequest > format.totalBlockCount) {
             add(ValidationIssue("blocksPerRequest", "İstek başına kart sayısı toplam kart sayısını aşamaz."))
         }
+        if (format.requestIntervalSeconds !in 2..120) {
+            add(ValidationIssue("requestIntervalSeconds", "İstek aralığı 2 ile 120 saniye arasında olmalıdır."))
+        }
         if (format.cardWidthFraction !in 0.72f..1f) {
             add(ValidationIssue("cardWidthFraction", "Kart genişliği %72 ile %100 arasında olmalıdır."))
         }
@@ -52,4 +64,3 @@ object LessonConfigValidator {
         }
     }
 }
-

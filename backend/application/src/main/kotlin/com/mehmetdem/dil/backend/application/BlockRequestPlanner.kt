@@ -73,8 +73,11 @@ class BlockRequestPlanner {
         FIRST BLOCK INDEX: $firstIndex
         REQUIRED BLOCK COUNT: $count
 
-        Return this exact top-level shape:
-        {"blocks":[{"index":0,"title":null,"source_text":null,"target_text":"","translation":null,"pronunciation":null,"explanation":null}]}
+        CARD JSON SCHEMA:
+        ${plan.outputSchemaJson ?: defaultCardSchema()}
+
+        Return this exact top-level shape and make every item conform to CARD JSON SCHEMA:
+        {"blocks":[CARD_OBJECTS]}
 
         Rules:
         - Return exactly $count blocks.
@@ -87,9 +90,12 @@ class BlockRequestPlanner {
         END SOURCE MATERIAL
     """.trimIndent()
 
+    private fun defaultCardSchema(): String = """
+        {"type":"object","additionalProperties":false,"required":["index","target_text"],"properties":{"index":{"type":"integer","minimum":0},"title":{"type":["string","null"]},"source_text":{"type":["string","null"]},"target_text":{"type":"string"},"translation":{"type":["string","null"]},"pronunciation":{"type":["string","null"]},"explanation":{"type":["string","null"]}}}
+    """.trimIndent()
+
     private fun sha256(value: String): String = MessageDigest
         .getInstance("SHA-256")
         .digest(value.toByteArray(Charsets.UTF_8))
         .joinToString("") { "%02x".format(it) }
 }
-

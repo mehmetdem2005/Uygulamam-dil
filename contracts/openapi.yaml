@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
   title: Uygulamam Dil API
-  version: 0.1.0-phase01
+  version: 0.3.0-phase03
 servers:
-  - url: https://render-address-will-be-configured.example
-    description: Render placeholder; not a deployed mock API
+  - url: https://uygulamam-dil-api.onrender.com
+    description: Render API
 paths:
   /health:
     get:
@@ -43,7 +43,84 @@ paths:
           description: Invalid development token
         "503":
           description: Provider or authentication is not configured
+  /v1/development/sources/youtube:ingest:
+    post:
+      operationId: ingestDevelopmentYouTubeSource
+      description: Produces deterministic source segments from captions overlapping the selected interval.
+      parameters:
+        - $ref: "#/components/parameters/DevelopmentToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/YouTubeSourceRequest"
+      responses:
+        "200":
+          description: Ordered source segments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceSegmentsResponse"
+        "400":
+          description: Invalid video or time range
+  /v1/development/sources/pdf:ingest:
+    post:
+      operationId: ingestDevelopmentPdfSource
+      description: Extracts selected pages with OCR fallback; maximum upload size is 50 MB.
+      parameters:
+        - $ref: "#/components/parameters/DevelopmentToken"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, startPage, endPage]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                startPage:
+                  type: integer
+                  minimum: 1
+                endPage:
+                  type: integer
+                  minimum: 1
+      responses:
+        "200":
+          description: Ordered source segments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceSegmentsResponse"
+  /v1/development/formats:compile:
+    post:
+      operationId: compileDevelopmentLessonFormat
+      description: Validates a versioned lesson format and deterministically compiles its card JSON Schema.
+      parameters:
+        - $ref: "#/components/parameters/DevelopmentToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompileFormatRequest"
+      responses:
+        "200":
+          description: Canonical schema and content identity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompileFormatResponse"
 components:
+  parameters:
+    DevelopmentToken:
+      in: header
+      name: X-Development-Token
+      required: true
+      schema:
+        type: string
   schemas:
     HealthResponse:
       type: object
@@ -93,3 +170,139 @@ components:
         thinkingEnabled:
           type: boolean
           default: false
+    YouTubeSourceRequest:
+      type: object
+      additionalProperties: false
+      required: [videoId, startMillis, endMillisExclusive]
+      properties:
+        videoId:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{11}$"
+        startMillis:
+          type: integer
+          minimum: 0
+        endMillisExclusive:
+          type: integer
+          minimum: 1
+        preferredLanguages:
+          type: array
+          items:
+            type: string
+          default: [tr, en]
+    SourceSegmentsResponse:
+      type: object
+      required: [segments]
+      properties:
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/SourceSegment"
+    SourceSegment:
+      type: object
+      required: [revisionId, ordinal, text, unit]
+      properties:
+        revisionId:
+          type: string
+        ordinal:
+          type: integer
+          minimum: 0
+        text:
+          type: string
+        unit:
+          type: string
+          enum: [millisecond, page, text]
+        startInclusive:
+          type: [integer, "null"]
+        endExclusive:
+          type: [integer, "null"]
+    FormatFieldRequest:
+      type: object
+      additionalProperties: false
+      required: [key, label]
+      properties:
+        key:
+          type: string
+          pattern: "^[a-z][a-z0-9_]{1,39}$"
+        label:
+          type: string
+          minLength: 1
+          maxLength: 40
+        kind:
+          type: string
+          enum: [short_text, long_text, pronunciation, examples, quiz]
+          default: short_text
+        required:
+          type: boolean
+          default: true
+        visible:
+          type: boolean
+          default: true
+        speakable:
+          type: boolean
+          default: false
+        position:
+          type: [integer, "null"]
+          minimum: 0
+    CompileFormatRequest:
+      type: object
+      additionalProperties: false
+      required: [formatId, title, instruction, teachingMode, teachingLanguage, targetLanguage, learnerLevel, fields, totalBlockCount, blocksPerRequest, requestIntervalSeconds, cardWidthFraction]
+      properties:
+        formatId:
+          type: string
+        revision:
+          type: integer
+          minimum: 1
+          default: 1
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        instruction:
+          type: string
+          minLength: 10
+          maxLength: 4000
+        teachingMode:
+          type: string
+          enum: [language, explain, summary, translate, custom]
+        teachingLanguage:
+          type: string
+        targetLanguage:
+          type: string
+        learnerLevel:
+          type: string
+        fields:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items:
+            $ref: "#/components/schemas/FormatFieldRequest"
+        totalBlockCount:
+          type: integer
+          minimum: 1
+          maximum: 100
+        blocksPerRequest:
+          type: integer
+          minimum: 1
+          maximum: 10
+        requestIntervalSeconds:
+          type: integer
+          minimum: 2
+          maximum: 120
+        cardWidthFraction:
+          type: number
+          minimum: 0.72
+          maximum: 1
+    CompileFormatResponse:
+      type: object
+      required: [formatId, revision, schemaJson, sha256]
+      properties:
+        formatId:
+          type: string
+        revision:
+          type: integer
+        schemaJson:
+          type: string
+        sha256:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
