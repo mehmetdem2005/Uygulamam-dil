@@ -44,9 +44,24 @@ jobs:
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - name: Assemble APK
         run: ./gradlew --no-daemon :android:app:assembleDebug
+      - name: Verify installable APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          BUILD_TOOLS="${ANDROID_HOME}/build-tools/36.0.0"
+
+          test -s "${APK}"
+          test "$(stat -c%s "${APK}")" -gt 5000000
+          unzip -t "${APK}"
+          "${BUILD_TOOLS}/zipalign" -c -v 4 "${APK}"
+          "${BUILD_TOOLS}/apksigner" verify --verbose --print-certs "${APK}"
+          "${BUILD_TOOLS}/aapt" dump badging "${APK}" | tee apk-badging.txt
+          grep -F "package: name='com.mehmetdem.dil' versionCode='4'" apk-badging.txt
+          grep -F "sdkVersion:'26'" apk-badging.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: uygulamam-dil-phase03-debug-apk
+          name: uygulamam-dil-v0.3.1-preview-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -78,25 +93,35 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
-      RELEASE_TAG: phase-03-preview
-      APK_NAME: UygulamamDil-phase03-debug.apk
+      RELEASE_TAG: phase-03.1-preview
+      APK_NAME: UygulamamDil-v0.3.1-preview.apk
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: uygulamam-dil-phase03-debug-apk
+          name: uygulamam-dil-v0.3.1-preview-apk
           path: release
       - name: Prepare APK and checksum
         run: |
+          set -euo pipefail
           mv release/app-debug.apk "release/${APK_NAME}"
-          sha256sum "release/${APK_NAME}" > "release/${APK_NAME}.sha256"
+          unzip -t "release/${APK_NAME}"
+          (cd release && sha256sum "${APK_NAME}" > "${APK_NAME}.sha256")
       - name: Create or update prerelease
         run: |
+          set -euo pipefail
+          git tag -f "${RELEASE_TAG}" "${GITHUB_SHA}"
+          git push origin "refs/tags/${RELEASE_TAG}" --force
           if ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
             gh release create "${RELEASE_TAG}" \
-              --target "${GITHUB_SHA}" \
-              --title "Uygulamam Dil — Faz 03 Önizleme" \
-              --notes "Responsive arayüz, kaynak alımı ve sürümlü format tasarımcısı içeren doğrulanmış debug APK." \
+              --verify-tag \
+              --title "Uygulamam Dil — v0.3.1 Önizleme" \
+              --notes "Android 11 uyumlu, sabit test imzalı ve cihaz güvenli alanlarına göre hizalanmış doğrulanmış APK." \
+              --prerelease
+          else
+            gh release edit "${RELEASE_TAG}" \
+              --title "Uygulamam Dil — v0.3.1 Önizleme" \
+              --notes "Android 11 uyumlu, sabit test imzalı ve cihaz güvenli alanlarına göre hizalanmış doğrulanmış APK." \
               --prerelease
           fi
           gh release upload "${RELEASE_TAG}" \

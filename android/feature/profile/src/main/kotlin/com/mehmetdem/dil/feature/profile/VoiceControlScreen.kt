@@ -61,6 +61,7 @@ import com.mehmetdem.dil.core.designsystem.DilMaxContentWidth
 import com.mehmetdem.dil.core.designsystem.DilMuted
 import com.mehmetdem.dil.core.designsystem.DilOuterPadding
 import com.mehmetdem.dil.core.designsystem.DilTeal
+import com.mehmetdem.dil.core.designsystem.DilVoiceBars
 import java.util.Locale
 
 @Composable
@@ -154,9 +155,9 @@ fun VoiceControlScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Geri") }
-                    Column {
+                    Column(Modifier.weight(1f)) {
                         Text("Sesli Kullanım", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                        Text("Mikrofonu ve Türkçe komut algılamayı test et.", color = DilMuted)
+                        Text("Mikrofonu ve Türkçe komut algılamayı test et.", color = DilMuted, maxLines = 2)
                     }
                 }
             }
@@ -180,7 +181,7 @@ fun VoiceControlScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                             )
                         }
                         Text(status, color = DilTeal, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        if (isListening) Text("▂▃▅▇▄▆▃▇▅▂▃▆▇▃▂", color = DilTeal, style = MaterialTheme.typography.headlineSmall)
+                        if (isListening) DilVoiceBars()
                         Text(
                             transcript.ifBlank { "Bir komut söyle: “Sonraki karta geç”" },
                             color = if (transcript.isBlank()) DilMuted else MaterialTheme.colorScheme.onSurface,
@@ -215,9 +216,9 @@ fun VoiceControlScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                     border = BorderStroke(1.dp, DilBorder),
                     shape = RoundedCornerShape(16.dp),
                 ) {
-                    Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Icon(Icons.Filled.HeadsetMic, null, tint = DilTeal)
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Desteklenen komut testi", fontWeight = FontWeight.SemiBold)
                             Text("Sonraki karta geç · Tekrar et · Durdur · Devam et", color = DilMuted)
                         }
@@ -230,9 +231,9 @@ fun VoiceControlScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                     border = BorderStroke(1.dp, DilBorder),
                     shape = RoundedCornerShape(16.dp),
                 ) {
-                    Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Icon(Icons.Filled.Info, null, tint = DilTeal)
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Çalışma sınırı", fontWeight = FontWeight.SemiBold)
                             Text(
                                 "Bu ekrandaki konuşma tanıma gerçektir ve yalnız ekran açıkken çalışır. Arka plan ve ekran kapalı komut servisi henüz etkin değildir.",

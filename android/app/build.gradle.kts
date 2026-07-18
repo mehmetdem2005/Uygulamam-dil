@@ -11,8 +11,8 @@ android {
         applicationId = "com.mehmetdem.dil"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0-phase03"
+        versionCode = 4
+        versionName = "0.3.1-phase03"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -22,7 +22,23 @@ android {
         buildConfig = true
     }
 
+    signingConfigs {
+        create("preview") {
+            // Public development key: stable installs for preview APKs only.
+            // Google Play builds must use Play App Signing, never this key.
+            storeFile = file("preview.keystore")
+            storePassword = "android"
+            keyAlias = "uygulamam-dil-preview"
+            keyPassword = "android"
+            enableV1Signing = true
+            enableV2Signing = true
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("preview")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

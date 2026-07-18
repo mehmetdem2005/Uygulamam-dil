@@ -5,6 +5,7 @@ local.properties
 *.iml
 *.jks
 *.keystore
+!android/app/preview.keystore
 *.apk
 *.aab
 .env

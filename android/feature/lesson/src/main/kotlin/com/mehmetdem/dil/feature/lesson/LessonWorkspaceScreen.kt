@@ -6,6 +6,7 @@ import android.webkit.WebViewClient
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -108,6 +110,8 @@ fun LessonWorkspaceScreen(
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(Icons.Filled.DeleteOutline, "Dersi sil", tint = MaterialTheme.colorScheme.error)
@@ -125,7 +129,7 @@ fun LessonWorkspaceScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
                         onClick = { showDeleteDialog = true },
-                        modifier = Modifier.weight(1f).height(52.dp),
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
                         shape = RoundedCornerShape(13.dp),
                     ) {
                         Icon(Icons.Filled.DeleteOutline, null)
@@ -133,7 +137,7 @@ fun LessonWorkspaceScreen(
                     }
                     Button(
                         onClick = onOpenDetails,
-                        modifier = Modifier.weight(1.8f).height(52.dp),
+                        modifier = Modifier.weight(1.8f).heightIn(min = 52.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = DilTeal),
                         shape = RoundedCornerShape(13.dp),
                     ) {
@@ -167,7 +171,12 @@ private fun RequestStatusCard(lesson: StoredLesson, completedCards: Int, request
                 Text("${completedCards.coerceAtMost(requestTotal)} / $requestTotal istek sonucu", fontWeight = FontWeight.Bold)
                 Text(workspaceStateText(lesson.state), color = DilMuted)
             }
-            Text(if (running) "● İşleniyor" else "● Kaydedildi", color = if (running) Color(0xFF168CC0) else Color(0xFF16A56D))
+            Text(
+                if (running) "● İşleniyor" else "● Kaydedildi",
+                color = if (running) Color(0xFF168CC0) else Color(0xFF16A56D),
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+            )
         }
     }
 }
@@ -181,7 +190,7 @@ private fun SourceSummary(lesson: StoredLesson) {
     ) {
         if (lesson.config.source.kind == SourceKind.YOUTUBE) YouTubeEmbed(lesson) else {
             Row(
-                Modifier.fillMaxWidth().height(88.dp).padding(14.dp),
+                Modifier.fillMaxWidth().heightIn(min = 88.dp).padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -206,7 +215,7 @@ private fun YouTubeEmbed(lesson: StoredLesson) {
     val start = range.startMillis / 1_000
     val end = range.endMillisExclusive / 1_000
     AndroidView(
-        modifier = Modifier.fillMaxWidth().height(190.dp),
+        modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
         factory = { context ->
             WebView(context).apply {
                 settings.javaScriptEnabled = true

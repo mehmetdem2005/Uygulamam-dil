@@ -3,13 +3,17 @@ package com.mehmetdem.dil
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.Home
@@ -18,9 +22,10 @@ import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -139,38 +144,53 @@ fun DilApp() {
     Scaffold(
         topBar = {
             if (currentRoute == Routes.Home) {
-                Row(
-                    Modifier.fillMaxWidth().height(64.dp).background(Color.White).padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("▣", color = DilTeal, style = MaterialTheme.typography.headlineSmall)
-                    Text(
-                        "  Uygulamam Dil",
-                        color = DilTeal,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
+                Surface(color = Color.White) {
+                    Column(Modifier.fillMaxWidth().statusBarsPadding()) {
+                        Row(
+                            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 20.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Outlined.AutoStories,
+                                contentDescription = null,
+                                tint = DilTeal,
+                                modifier = Modifier.size(30.dp),
+                            )
+                            Text(
+                                "Uygulamam Dil",
+                                modifier = Modifier.padding(start = 10.dp),
+                                color = DilTeal,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                            )
+                        }
+                    }
                 }
             }
         },
         bottomBar = {
             if (!fullScreen) {
-                Row(Modifier.fillMaxWidth().height(72.dp).background(Color.White)) {
-                    bottomDestinations.forEach { destination ->
-                        NavigationBarItem(
-                            selected = currentRoute == destination.route,
-                            onClick = {
-                                if (destination.route == Routes.Create) requestedSourceKind = SourceKind.YOUTUBE
-                                navigateTop(destination.route)
-                            },
-                            icon = { Icon(destination.icon, destination.label) },
-                            label = { Text(destination.label) },
-                            colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                                indicatorColor = Color.Transparent,
-                                selectedIconColor = DilTeal,
-                                selectedTextColor = DilTeal,
-                            ),
-                        )
+                Surface(color = Color.White) {
+                    Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
+                        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp)) {
+                            bottomDestinations.forEach { destination ->
+                                NavigationBarItem(
+                                    selected = currentRoute == destination.route,
+                                    onClick = {
+                                        if (destination.route == Routes.Create) requestedSourceKind = SourceKind.YOUTUBE
+                                        navigateTop(destination.route)
+                                    },
+                                    icon = { Icon(destination.icon, destination.label) },
+                                    label = { Text(destination.label, maxLines = 1) },
+                                    colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                                        indicatorColor = Color.Transparent,
+                                        selectedIconColor = DilTeal,
+                                        selectedTextColor = DilTeal,
+                                    ),
+                                )
+                            }
+                        }
                     }
                 }
             }

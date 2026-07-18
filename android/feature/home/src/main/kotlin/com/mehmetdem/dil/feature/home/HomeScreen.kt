@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -136,14 +137,14 @@ fun HomeScreen(
 
 @Composable
 private fun CreateSourceCard(title: String, subtitle: String, icon: ImageVector, tint: Color, background: Color, onClick: () -> Unit, modifier: Modifier) {
-    Card(modifier = modifier.height(126.dp).clickable(onClick = onClick), colors = CardDefaults.cardColors(containerColor = background.copy(alpha = .58f)), border = BorderStroke(1.dp, background), shape = RoundedCornerShape(16.dp)) {
+    Card(modifier = modifier.heightIn(min = 148.dp).clickable(onClick = onClick), colors = CardDefaults.cardColors(containerColor = background.copy(alpha = .58f)), border = BorderStroke(1.dp, background), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(34.dp).background(background, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint) }
                 Icon(Icons.Filled.ArrowForwardIos, null, modifier = Modifier.size(16.dp))
             }
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = DilMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = DilMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }

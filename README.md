@@ -51,7 +51,7 @@ Gereksinimler: JDK 17 ve Android SDK 36. Gradle 9.4.1, SHA-256 doğrulamalı wra
 ./gradlew :android:core:model:test :android:core:data:test :backend:application:test
 ```
 
-APK, `android/app/build/outputs/apk/debug/app-debug.apk` altında oluşur. Aynı komut GitHub Actions tarafından çalıştırılır ve APK artifact olarak yayımlanır.
+APK, `android/app/build/outputs/apk/debug/app-debug.apk` altında oluşur. Aynı komut GitHub Actions tarafından çalıştırılır; ZIP bütünlüğü, hizalama, paket kimliği, Android 11 uyumluluğu ve APK imzası doğrulandıktan sonra artifact olarak yayımlanır. Önizleme derlemeleri güncelleme kurulabilmesi için sabit ve yalnız geliştirmede kullanılan bir test anahtarıyla imzalanır.
 
 ## Gizli değerler
 
