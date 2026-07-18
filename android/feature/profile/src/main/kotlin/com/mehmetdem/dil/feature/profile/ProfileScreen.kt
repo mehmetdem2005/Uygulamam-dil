@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -50,6 +51,8 @@ import com.mehmetdem.dil.core.designsystem.DilTeal
 @Composable
 fun ProfileScreen(
     lessonCount: Int,
+    serverVerified: Boolean,
+    providerRequestCount: Int,
     onVoiceSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -129,7 +132,12 @@ fun ProfileScreen(
                     SettingRow(Icons.Filled.Language, "Uygulama dili", "Türkçe", DilBlueSoft)
                     SettingRow(Icons.Filled.FolderOpen, "Yerel kayıt", "$lessonCount ders", DilGreenSoft)
                     SettingRow(Icons.Filled.CloudOff, "Bulut senkronizasyonu", "Bağlı değil", Color(0xFFFFF1E5))
-                    SettingRow(Icons.Filled.AutoAwesome, "Yapay zekâ ve ses", "Sunucu bağlantısı bekleniyor", DilPurpleSoft)
+                    SettingRow(
+                        Icons.Filled.AutoAwesome,
+                        "Yapay zekâ ders üretimi",
+                        if (serverVerified) "Sunucu doğrulandı · $providerRequestCount istek kaydedildi" else "İlk ders oluşturulurken doğrulanacak",
+                        DilPurpleSoft,
+                    )
                 }
             }
             item {
@@ -150,7 +158,7 @@ fun ProfileScreen(
             }
             item {
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Uygulamam Dil v0.3.0", color = DilMuted, style = MaterialTheme.typography.bodyMedium)
+                    Text("Uygulamam Dil v0.4.0", color = DilMuted, style = MaterialTheme.typography.bodyMedium)
                     Text("Geliştirme sürümü", color = DilMuted, style = MaterialTheme.typography.bodyMedium)
                 }
             }
@@ -177,12 +185,12 @@ private fun SettingRow(
     onClick: (() -> Unit)? = null,
 ) {
     val rowModifier = if (onClick == null) {
-        Modifier.fillMaxWidth().height(62.dp)
+        Modifier.fillMaxWidth().heightIn(min = 68.dp)
     } else {
-        Modifier.fillMaxWidth().height(62.dp).clickable(onClick = onClick)
+        Modifier.fillMaxWidth().heightIn(min = 68.dp).clickable(onClick = onClick)
     }
     Row(
-        rowModifier.padding(horizontal = 11.dp),
+        rowModifier.padding(horizontal = 11.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -191,7 +199,7 @@ private fun SettingRow(
         }
         Column(Modifier.weight(1f)) {
             Text(title, fontWeight = FontWeight.Medium)
-            Text(detail, color = DilMuted, style = MaterialTheme.typography.bodySmall)
+            Text(detail, color = DilMuted, style = MaterialTheme.typography.bodySmall, maxLines = 2)
         }
         if (onClick != null) Icon(Icons.Filled.ChevronRight, "Aç", tint = DilMuted)
     }

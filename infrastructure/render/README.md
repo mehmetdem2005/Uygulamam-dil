@@ -6,7 +6,8 @@ Gerçek Render servisleri Frankfurt bölgesinde ücretsiz instance olarak oluşt
 - `uygulamam-dil-edge-tts`: Edge TTS ses servisi
 
 Depo kökündeki `render.yaml` production Blueprint kaynağıdır. Secret değerleri Git'e
-yazılmaz. `DEEPSEEK_API_KEY`, `SUPABASE_URL` ve `SUPABASE_SERVICE_ROLE_KEY` Render
+yazılmaz. `DEEPSEEK_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` ve gerektiğinde
+`YOUTUBE_COOKIES_BASE64`/`YOUTUBE_PO_TOKEN`/`YOUTUBE_VISITOR_DATA` Render
 Dashboard üzerinden tanımlanır. Servisler yalnızca GitHub CI kontrolleri geçtikten sonra
 otomatik dağıtılacak şekilde tanımlanmıştır.
 

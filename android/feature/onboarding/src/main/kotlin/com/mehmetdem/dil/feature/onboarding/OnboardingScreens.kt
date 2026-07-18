@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -48,7 +50,9 @@ import com.mehmetdem.dil.core.designsystem.DilGreenSoft
 import com.mehmetdem.dil.core.designsystem.DilMaxContentWidth
 import com.mehmetdem.dil.core.designsystem.DilMuted
 import com.mehmetdem.dil.core.designsystem.DilPurpleSoft
+import com.mehmetdem.dil.core.designsystem.DilProgressDots
 import com.mehmetdem.dil.core.designsystem.DilTeal
+import com.mehmetdem.dil.core.designsystem.DilVoiceBars
 
 @Composable
 fun WelcomeOnboardingScreen(onContinue: () -> Unit, onSkip: () -> Unit, modifier: Modifier = Modifier) {
@@ -67,10 +71,10 @@ fun WelcomeOnboardingScreen(onContinue: () -> Unit, onSkip: () -> Unit, modifier
             FeatureRow(Icons.Filled.AutoAwesome, "Yapay Zekâ Destekli", "Akıllı özetler, çeviri ve pratiklerle daha hızlı öğren.", DilGreenSoft)
             FeatureRow(Icons.Filled.TrendingUp, "İlerlemeni Takip Et", "Derslerini kaydet, ilerlemeni gör ve motive kal.", DilPurpleSoft)
             Spacer(Modifier.height(8.dp))
-            Text("●  ○  ○  ○  ○  ○  ○  ○  ○", color = DilTeal)
+            DilProgressDots(currentStep = 1, totalSteps = 9)
             Button(
                 onClick = onContinue,
-                modifier = Modifier.fillMaxWidth().height(54.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = DilTeal),
                 shape = RoundedCornerShape(14.dp),
             ) { Text("Devam Et  ›", style = MaterialTheme.typography.titleMedium) }
@@ -115,8 +119,8 @@ fun PermissionOnboardingScreen(onRequestPermissions: () -> Unit, onLater: () -> 
             Text("2 / 9", color = DilTeal, fontWeight = FontWeight.Bold)
             Box(Modifier.size(160.dp).background(DilBlueSoft, CircleShape), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("▣", color = DilTeal, style = MaterialTheme.typography.displaySmall)
-                    Text("▂▃▆▇▅▃▂", color = DilTeal, style = MaterialTheme.typography.titleLarge)
+                    Icon(Icons.Outlined.AutoStories, null, tint = DilTeal, modifier = Modifier.size(44.dp))
+                    DilVoiceBars()
                 }
             }
             Text("Mikrofonla Komut Ver", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
@@ -135,9 +139,9 @@ fun PermissionOnboardingScreen(onRequestPermissions: () -> Unit, onLater: () -> 
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Text("●  ○  ○  ○  ○  ○  ○  ○", color = DilTeal)
-            Button(onClick = onRequestPermissions, modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = DilTeal), shape = RoundedCornerShape(14.dp)) { Text("İzinleri Aç") }
-            OutlinedButton(onClick = onLater, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, DilBorder)) { Text("Daha Sonra", color = DilTeal) }
+            DilProgressDots(currentStep = 2, totalSteps = 9)
+            Button(onClick = onRequestPermissions, modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp), colors = ButtonDefaults.buttonColors(containerColor = DilTeal), shape = RoundedCornerShape(14.dp)) { Text("İzinleri Aç") }
+            OutlinedButton(onClick = onLater, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp), shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, DilBorder)) { Text("Daha Sonra", color = DilTeal) }
         }
     }
 }
@@ -151,7 +155,14 @@ private fun PermissionRow(icon: ImageVector, title: String, subtitle: String, st
                 Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 Text(subtitle, color = DilMuted)
             }
-            Text(status, color = DilTeal, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                status,
+                modifier = Modifier.widthIn(max = 82.dp),
+                color = DilTeal,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.End,
+                maxLines = 2,
+            )
         }
     }
 }

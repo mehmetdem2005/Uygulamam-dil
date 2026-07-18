@@ -6,6 +6,7 @@ import com.mehmetdem.dil.core.model.LessonFormat
 import com.mehmetdem.dil.core.model.LessonFormatField
 import com.mehmetdem.dil.core.model.LessonBlock
 import com.mehmetdem.dil.core.model.LessonJobState
+import com.mehmetdem.dil.core.model.LessonGenerationMetrics
 import com.mehmetdem.dil.core.model.LessonSessionConfig
 import com.mehmetdem.dil.core.model.LessonVisibility
 import com.mehmetdem.dil.core.model.PlaybackPreferences
@@ -41,6 +42,9 @@ private data class StoredLessonDto(
     val source: SourceDto,
     val format: FormatDto,
     val blocks: List<BlockDto> = emptyList(),
+    val remoteJobId: String? = null,
+    val generationMetrics: MetricsDto = MetricsDto(),
+    val lastSyncError: String? = null,
 ) {
     fun toDomain() = StoredLesson(
         id = id,
@@ -48,6 +52,9 @@ private data class StoredLessonDto(
         state = LessonJobState.valueOf(state),
         completedBlockCount = completedBlockCount,
         blocks = blocks.map(BlockDto::toDomain),
+        remoteJobId = remoteJobId,
+        generationMetrics = generationMetrics.toDomain(),
+        lastSyncError = lastSyncError,
         createdAtEpochMillis = createdAtEpochMillis,
         updatedAtEpochMillis = updatedAtEpochMillis,
     )
@@ -63,6 +70,34 @@ private data class StoredLessonDto(
             source = SourceDto.fromDomain(lesson.config.source),
             format = FormatDto.fromDomain(lesson.config.format),
             blocks = lesson.blocks.map(BlockDto::fromDomain),
+            remoteJobId = lesson.remoteJobId,
+            generationMetrics = MetricsDto.fromDomain(lesson.generationMetrics),
+            lastSyncError = lesson.lastSyncError,
+        )
+    }
+}
+
+@Serializable
+private data class MetricsDto(
+    val providerRequestCount: Int = 0,
+    val inputTokens: Long = 0,
+    val outputTokens: Long = 0,
+    val totalTokens: Long = 0,
+    val providerLatencyMillis: Long = 0,
+    val estimatedCostMicroUsd: Long = 0,
+) {
+    fun toDomain() = LessonGenerationMetrics(
+        providerRequestCount, inputTokens, outputTokens, totalTokens, providerLatencyMillis, estimatedCostMicroUsd,
+    )
+
+    companion object {
+        fun fromDomain(metrics: LessonGenerationMetrics) = MetricsDto(
+            metrics.providerRequestCount,
+            metrics.inputTokens,
+            metrics.outputTokens,
+            metrics.totalTokens,
+            metrics.providerLatencyMillis,
+            metrics.estimatedCostMicroUsd,
         )
     }
 }

@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -72,6 +74,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mehmetdem.dil.core.designsystem.DilBlueSoft
 import com.mehmetdem.dil.core.designsystem.DilBorder
@@ -79,6 +82,7 @@ import com.mehmetdem.dil.core.designsystem.DilGreenSoft
 import com.mehmetdem.dil.core.designsystem.DilMaxContentWidth
 import com.mehmetdem.dil.core.designsystem.DilMuted
 import com.mehmetdem.dil.core.designsystem.DilOuterPadding
+import com.mehmetdem.dil.core.designsystem.DilProgressDots
 import com.mehmetdem.dil.core.designsystem.DilRedSoft
 import com.mehmetdem.dil.core.designsystem.DilTeal
 import com.mehmetdem.dil.core.model.ContentRange
@@ -161,7 +165,7 @@ private fun SourceSelectionScreen(
 
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         LazyColumn(
-            modifier = Modifier.fillMaxWidth().widthIn(max = DilMaxContentWidth),
+            modifier = Modifier.fillMaxWidth().widthIn(max = DilMaxContentWidth).imePadding(),
             contentPadding = PaddingValues(horizontal = DilOuterPadding, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -172,7 +176,7 @@ private fun SourceSelectionScreen(
                         Text("Ders Oluştur", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                         Text("3 / 9", color = DilTeal, fontWeight = FontWeight.Bold)
                     }
-                    Text("●━━━━●━━━━●━━━━○━━━━○━━━━○", color = DilTeal, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                    DilProgressDots(currentStep = 3, totalSteps = 9)
                     Text("Kaynağı Seç", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
                     Text("Dersinin kaynağını seç ve detayları gir.", color = DilMuted)
                 }
@@ -219,9 +223,14 @@ private fun SourceSelectionScreen(
             } else {
                 item {
                     LabeledField("PDF Dosyası") {
-                        OutlinedButton(onClick = { picker.launch(arrayOf("application/pdf")) }, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(14.dp)) {
+                        OutlinedButton(onClick = { picker.launch(arrayOf("application/pdf")) }, modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp), shape = RoundedCornerShape(14.dp)) {
                             Icon(Icons.Filled.Description, null)
-                            Text(if (pdfName.isBlank()) "PDF dosyası seç" else pdfName, modifier = Modifier.padding(start = 8.dp))
+                            Text(
+                                if (pdfName.isBlank()) "PDF dosyası seç" else pdfName,
+                                modifier = Modifier.padding(start = 8.dp),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
                     }
                 }
@@ -240,10 +249,10 @@ private fun SourceSelectionScreen(
             item { LanguageSelector("Ders Dili", lessonLanguage) { lessonLanguage = if (lessonLanguage == "Türkçe") "İngilizce" else "Türkçe" } }
             item { LanguageSelector("Çıktı Dili", outputLanguage) { outputLanguage = if (outputLanguage == "Türkçe") "İngilizce" else "Türkçe" } }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = DilBlueSoft.copy(alpha = .38f)), border = BorderStroke(1.dp, Color(0xFFCEE7F1)), shape = RoundedCornerShape(14.dp)) {
-                    Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = DilBlueSoft.copy(alpha = .38f)), border = BorderStroke(1.dp, Color(0xFFCEE7F1)), shape = RoundedCornerShape(14.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Icon(Icons.Filled.Info, null, tint = DilTeal)
-                        Text("Yalnızca seçtiğin aralıktaki içerik işlenecek ve ders materyalleri bu bölümden oluşturulacaktır.")
+                        Text("Yalnızca seçtiğin aralıktaki içerik işlenecek ve ders materyalleri bu bölümden oluşturulacaktır.", modifier = Modifier.weight(1f))
                     }
                 }
             }
@@ -266,7 +275,7 @@ private fun SourceSelectionScreen(
                             onFailure = { error = it.message ?: "Kaynak aralığı geçersiz." },
                         )
                     },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = DilTeal),
                     shape = RoundedCornerShape(14.dp),
                 ) {
@@ -283,7 +292,7 @@ private fun SourceSelectionScreen(
 @Composable
 private fun SourceChoiceCard(title: String, subtitle: String, icon: ImageVector, selected: Boolean, background: Color, onClick: () -> Unit, modifier: Modifier) {
     Card(
-        modifier = modifier.height(118.dp).clickable(onClick = onClick),
+        modifier = modifier.heightIn(min = 144.dp).clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = if (selected) background.copy(alpha = .48f) else Color.White),
         border = BorderStroke(1.dp, if (selected) background else DilBorder),
         shape = RoundedCornerShape(16.dp),
@@ -294,7 +303,13 @@ private fun SourceChoiceCard(title: String, subtitle: String, icon: ImageVector,
                 Icon(if (selected) Icons.Filled.CheckCircle else Icons.Filled.Remove, null, tint = if (selected) DilTeal else DilMuted)
             }
             Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            Text(subtitle, color = DilMuted, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                subtitle,
+                color = DilMuted,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -324,8 +339,8 @@ private fun RangeInput(value: String, onChange: (String) -> Unit, label: String,
 @Composable
 private fun LanguageSelector(title: String, value: String, onClick: () -> Unit) {
     LabeledField(title) {
-        Card(modifier = Modifier.fillMaxWidth().height(52.dp).clickable(onClick = onClick), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, DilBorder), shape = RoundedCornerShape(14.dp)) {
-            Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Card(modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp).clickable(onClick = onClick), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, DilBorder), shape = RoundedCornerShape(14.dp)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(if (value == "Türkçe") "🇹🇷" else "🇬🇧")
                 Text(value, modifier = Modifier.padding(start = 10.dp).weight(1f))
                 Text("⌄", color = DilMuted)
@@ -387,16 +402,26 @@ private fun FormatDesignerScreen(
 
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         LazyColumn(
-            modifier = Modifier.fillMaxWidth().widthIn(max = DilMaxContentWidth),
+            modifier = Modifier.fillMaxWidth().widthIn(max = DilMaxContentWidth).imePadding(),
             contentPadding = PaddingValues(horizontal = DilOuterPadding, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Geri") }
-                    Text("Format Belirleme", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { copyGeneration += 1; if (!title.endsWith("— Kopya")) title = "$title — Kopya" }) { Text("Kopyala") }
-                    Text("Sürüm 1", color = DilTeal, style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        "Format Belirleme",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    TextButton(
+                        onClick = { copyGeneration += 1; if (!title.endsWith("— Kopya")) title = "$title — Kopya" },
+                        contentPadding = PaddingValues(horizontal = 7.dp, vertical = 4.dp),
+                    ) { Text("Kopyala", maxLines = 1) }
+                    Text("v1", color = DilTeal, style = MaterialTheme.typography.labelLarge, maxLines = 1)
                 }
             }
             item { ModeSelector(mode) { modeName = it.name; applyModePreset(it, fields, onTitle = { title = it }, onInstruction = { instruction = it }) } }
@@ -460,7 +485,7 @@ private fun FormatDesignerScreen(
             }
             item { StepperCard("İstek Aralığı", requestInterval, suffix = "saniye", onMinus = { requestInterval = (requestInterval - 1).coerceAtLeast(2) }, onPlus = { requestInterval = (requestInterval + 1).coerceAtMost(120) }) }
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, DilBorder), shape = RoundedCornerShape(16.dp)) {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, DilBorder), shape = RoundedCornerShape(16.dp)) {
                     Column {
                         FormatToggle("Sürekli API İsteği", continuous) { continuous = it }
                         FormatToggle("Telefon kapalıyken çalışsın", screenOff) { screenOff = it }
@@ -502,7 +527,7 @@ private fun FormatDesignerScreen(
                             }
                         }.fold(onSuccess = onCreate, onFailure = { error = it.message ?: "Format ayarları geçersiz." })
                     },
-                    modifier = Modifier.fillMaxWidth().height(58.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = DilTeal),
                     shape = RoundedCornerShape(14.dp),
                 ) {
@@ -530,7 +555,13 @@ private fun ModeSelector(selected: TeachingMode, onSelect: (TeachingMode) -> Uni
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(icon, null, tint = if (selected == mode) DilTeal else DilMuted, modifier = Modifier.size(20.dp))
-                Text(label, color = if (selected == mode) DilTeal else DilMuted, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    label,
+                    color = if (selected == mode) DilTeal else DilMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -569,7 +600,7 @@ private fun applyModePreset(mode: TeachingMode, fields: MutableList<EditableFiel
 
 @Composable
 private fun DesignerCard(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, DilBorder), shape = RoundedCornerShape(16.dp)) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, DilBorder), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             content()
@@ -589,8 +620,8 @@ private fun FieldEditor(index: Int, total: Int, field: EditableField, onLabelCha
 
 @Composable
 private fun SmallSelector(label: String, value: String, onClick: () -> Unit, modifier: Modifier) {
-    Card(modifier = modifier.height(54.dp).clickable(onClick = onClick), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, DilBorder), shape = RoundedCornerShape(12.dp)) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+    Card(modifier = modifier.heightIn(min = 62.dp).clickable(onClick = onClick), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, DilBorder), shape = RoundedCornerShape(12.dp)) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
             Text(label, color = DilMuted, style = MaterialTheme.typography.bodyMedium)
             Text("$value  ⌄", fontWeight = FontWeight.SemiBold)
         }
@@ -601,21 +632,21 @@ private fun String.nextLanguage(): String = if (this == "Türkçe") "İngilizce"
 
 @Composable
 private fun StepperCard(title: String, value: Int, suffix: String? = null, onMinus: () -> Unit, onPlus: () -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, DilBorder), shape = RoundedCornerShape(16.dp)) {
-        Row(Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(title, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, DilBorder), shape = RoundedCornerShape(16.dp)) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
             IconButton(onClick = onMinus) { Icon(Icons.Filled.Remove, "Azalt") }
-            Text(value.toString(), modifier = Modifier.padding(horizontal = 22.dp), fontWeight = FontWeight.SemiBold)
+            Text(value.toString(), modifier = Modifier.widthIn(min = 34.dp).padding(horizontal = 6.dp), fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
             IconButton(onClick = onPlus) { Icon(Icons.Filled.Add, "Artır") }
-            if (suffix != null) Text(suffix, color = DilMuted, style = MaterialTheme.typography.bodyMedium)
+            if (suffix != null) Text(suffix, color = DilMuted, style = MaterialTheme.typography.bodySmall, maxLines = 1)
         }
     }
 }
 
 @Composable
 private fun FormatToggle(label: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, modifier = Modifier.weight(1f))
+    Row(Modifier.fillMaxWidth().heightIn(min = 58.dp).padding(horizontal = 14.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, modifier = Modifier.weight(1f), maxLines = 2)
         Switch(checked = checked, onCheckedChange = onChecked)
     }
 }
@@ -627,10 +658,10 @@ private fun LivePreview(fields: List<EditableField>) {
             Text("● Canlı Önizleme", color = Color(0xFF159E68), modifier = Modifier.background(DilGreenSoft, RoundedCornerShape(10.dp)).padding(horizontal = 9.dp, vertical = 5.dp), style = MaterialTheme.typography.bodyMedium)
         }
         Row(Modifier.fillMaxWidth().background(DilBlueSoft.copy(alpha = .7f), RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))) {
-            fields.take(3).forEach { Text(it.label.ifBlank { "Alan" }, modifier = Modifier.weight(1f).padding(10.dp), fontWeight = FontWeight.SemiBold) }
+            fields.take(3).forEach { Text(it.label.ifBlank { "Alan" }, modifier = Modifier.weight(1f).padding(10.dp), fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis) }
         }
         Row(Modifier.fillMaxWidth()) {
-            fields.take(3).forEachIndexed { index, _ -> Text(if (index == 0) "he said that" else if (index == 1) "o dedi ki" else "kısa açıklama", modifier = Modifier.weight(1f).padding(10.dp)) }
+            fields.take(3).forEachIndexed { index, _ -> Text(if (index == 0) "he said that" else if (index == 1) "o dedi ki" else "kısa açıklama", modifier = Modifier.weight(1f).padding(10.dp), maxLines = 3, overflow = TextOverflow.Ellipsis) }
         }
     }
 }

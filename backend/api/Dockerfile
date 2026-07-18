@@ -6,10 +6,18 @@ RUN gradle --no-daemon :backend:api:installDist
 
 FROM eclipse-temurin:17-jre
 
+ARG DENO_VERSION=2.9.3
+
 USER root
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-tur python3 python3-pip \
-    && pip3 install --no-cache-dir --break-system-packages yt-dlp \
+    && apt-get install -y --no-install-recommends ca-certificates curl unzip poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-tur python3 python3-pip \
+    && curl --fail --location --silent --show-error \
+        --output /tmp/deno.zip \
+        "https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip" \
+    && unzip -q /tmp/deno.zip -d /usr/local/bin \
+    && deno --version \
+    && pip3 install --no-cache-dir --break-system-packages 'yt-dlp[default]' \
+    && rm -f /tmp/deno.zip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

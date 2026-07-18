@@ -3,13 +3,17 @@ package com.mehmetdem.dil
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.Home
@@ -18,16 +22,20 @@ import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +53,7 @@ import com.mehmetdem.dil.core.data.PreferencesLessonLocalRepository
 import com.mehmetdem.dil.core.designsystem.DilTeal
 import com.mehmetdem.dil.core.model.SourceKind
 import com.mehmetdem.dil.core.model.StoredLesson
+import com.mehmetdem.dil.core.network.LessonJobApi
 import com.mehmetdem.dil.feature.home.HomeScreen
 import com.mehmetdem.dil.feature.lesson.LessonDetailScreen
 import com.mehmetdem.dil.feature.lesson.LessonWorkspaceScreen
@@ -113,6 +122,8 @@ fun DilApp() {
 
     val repository = remember { PreferencesLessonLocalRepository(context) }
     var lessons by remember { mutableStateOf(repository.all()) }
+    val scope = rememberCoroutineScope()
+    val lessonApi = remember { LessonJobApi(BuildConfig.API_BASE_URL) }
     var requestedSourceKind by rememberSaveable { mutableStateOf(SourceKind.YOUTUBE) }
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -123,7 +134,20 @@ fun DilApp() {
         lessons = repository.all()
     }
 
+    val coordinator = remember(repository, lessonApi, scope) {
+        LessonJobCoordinator(context, repository, lessonApi, scope, ::refreshLessons)
+    }
+
+    DisposableEffect(lessonApi) {
+        onDispose { lessonApi.close() }
+    }
+
+    LaunchedEffect(coordinator) {
+        coordinator.syncAll(repository.all())
+    }
+
     fun deleteLesson(id: String) {
+        repository.find(id)?.let(coordinator::cancelRemoteBestEffort)
         repository.delete(id)
         refreshLessons()
     }
@@ -139,38 +163,53 @@ fun DilApp() {
     Scaffold(
         topBar = {
             if (currentRoute == Routes.Home) {
-                Row(
-                    Modifier.fillMaxWidth().height(64.dp).background(Color.White).padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("▣", color = DilTeal, style = MaterialTheme.typography.headlineSmall)
-                    Text(
-                        "  Uygulamam Dil",
-                        color = DilTeal,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
+                Surface(color = Color.White) {
+                    Column(Modifier.fillMaxWidth().statusBarsPadding()) {
+                        Row(
+                            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 20.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Outlined.AutoStories,
+                                contentDescription = null,
+                                tint = DilTeal,
+                                modifier = Modifier.size(30.dp),
+                            )
+                            Text(
+                                "Uygulamam Dil",
+                                modifier = Modifier.padding(start = 10.dp),
+                                color = DilTeal,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                            )
+                        }
+                    }
                 }
             }
         },
         bottomBar = {
             if (!fullScreen) {
-                Row(Modifier.fillMaxWidth().height(72.dp).background(Color.White)) {
-                    bottomDestinations.forEach { destination ->
-                        NavigationBarItem(
-                            selected = currentRoute == destination.route,
-                            onClick = {
-                                if (destination.route == Routes.Create) requestedSourceKind = SourceKind.YOUTUBE
-                                navigateTop(destination.route)
-                            },
-                            icon = { Icon(destination.icon, destination.label) },
-                            label = { Text(destination.label) },
-                            colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                                indicatorColor = Color.Transparent,
-                                selectedIconColor = DilTeal,
-                                selectedTextColor = DilTeal,
-                            ),
-                        )
+                Surface(color = Color.White) {
+                    Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
+                        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp)) {
+                            bottomDestinations.forEach { destination ->
+                                NavigationBarItem(
+                                    selected = currentRoute == destination.route,
+                                    onClick = {
+                                        if (destination.route == Routes.Create) requestedSourceKind = SourceKind.YOUTUBE
+                                        navigateTop(destination.route)
+                                    },
+                                    icon = { Icon(destination.icon, destination.label) },
+                                    label = { Text(destination.label, maxLines = 1) },
+                                    colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                                        indicatorColor = Color.Transparent,
+                                        selectedIconColor = DilTeal,
+                                        selectedTextColor = DilTeal,
+                                    ),
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -201,6 +240,7 @@ fun DilApp() {
                     onCreate = { config ->
                         val lesson = repository.create(config)
                         refreshLessons()
+                        coordinator.sync(lesson)
                         navController.navigate(Routes.workspace(lesson.id))
                     },
                 )
@@ -222,6 +262,9 @@ fun DilApp() {
                             deleteLesson(lesson.id)
                             navController.popBackStack(Routes.Home, inclusive = false)
                         },
+                        onPause = { coordinator.pause(lesson) },
+                        onResume = { coordinator.resume(lesson) },
+                        onRetry = { coordinator.retry(lesson) },
                     )
                 }
             }
@@ -235,6 +278,8 @@ fun DilApp() {
             composable(Routes.Profile) {
                 ProfileScreen(
                     lessonCount = lessons.size,
+                    serverVerified = lessons.any { it.remoteJobId != null },
+                    providerRequestCount = lessons.sumOf { it.generationMetrics.providerRequestCount },
                     onVoiceSettings = { navController.navigate(Routes.Voice) },
                 )
             }

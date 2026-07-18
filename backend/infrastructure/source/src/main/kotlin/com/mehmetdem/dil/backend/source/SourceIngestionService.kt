@@ -1,6 +1,7 @@
 package com.mehmetdem.dil.backend.source
 
 import com.mehmetdem.dil.backend.domain.PdfIngestionRequest
+import com.mehmetdem.dil.backend.domain.SourceAuthenticationRequiredException
 import com.mehmetdem.dil.backend.domain.SourceIngestionGateway
 import com.mehmetdem.dil.backend.domain.SourceSegment
 import com.mehmetdem.dil.backend.domain.SourceUnit
@@ -13,9 +14,16 @@ import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.listDirectoryEntries
 
+data class YouTubeAccessConfig(
+    val cookiesFile: Path? = null,
+    val poToken: String? = null,
+    val visitorData: String? = null,
+)
+
 class SourceIngestionService(
     private val runner: ExternalProcessRunner = SafeProcessRunner(),
     private val tempRoot: Path? = null,
+    private val youtubeAccess: YouTubeAccessConfig = YouTubeAccessConfig(),
 ) : SourceIngestionGateway {
     override suspend fun ingestYouTube(request: YouTubeIngestionRequest): List<SourceSegment> {
         require(request.videoId.matches(Regex("[A-Za-z0-9_-]{11}"))) { "YouTube video kimliği geçersiz." }
@@ -31,16 +39,29 @@ class SourceIngestionService(
                 .distinct()
                 .joinToString(",") { "$it.*" }
                 .ifBlank { "tr.*,en.*" }
-            val result = runner.run(
-                listOf(
+            val command = buildList {
+                addAll(listOf(
                     "yt-dlp", "--skip-download", "--write-subs", "--write-auto-subs",
+                    "--js-runtimes", "deno",
                     "--sub-langs", languageSelector, "--sub-format", "vtt",
-                    "--no-playlist", "--output", outputTemplate,
-                    "https://www.youtube.com/watch?v=${request.videoId}",
-                ),
+                    "--no-playlist",
+                ))
+                youtubeAccess.cookiesFile?.let { cookies -> addAll(listOf("--cookies", cookies.toString())) }
+                youtubeExtractorArguments()?.let { arguments -> addAll(listOf("--extractor-args", arguments)) }
+                addAll(listOf("--output", outputTemplate, "https://www.youtube.com/watch?v=${request.videoId}"))
+            }
+            val result = runner.run(
+                command,
                 timeoutMillis = 90_000,
             )
-            check(result.exitCode == 0) { "YouTube altyazısı alınamadı: ${safeError(result.stderr)}" }
+            if (result.exitCode != 0) {
+                if (result.stderr.contains("Sign in to confirm", ignoreCase = true)) {
+                    throw SourceAuthenticationRequiredException(
+                        "YouTube sunucu erişimini doğrulama istiyor. Yönetici YouTube oturum çerezi veya PO token yapılandırmalıdır.",
+                    )
+                }
+                error("YouTube altyazısı alınamadı: ${safeError(result.stderr)}")
+            }
             val subtitle = directory.listDirectoryEntries()
                 .filter { it.isRegularFile() && it.extension.equals("vtt", ignoreCase = true) }
                 .sortedBy { it.fileName.toString() }
@@ -136,7 +157,21 @@ class SourceIngestionService(
         .replace(Regex("\\n{3,}"), "\n\n")
         .trim()
 
-    private fun safeError(value: String): String = value.replace(Regex("\\s+"), " ").trim().take(300)
+    private fun youtubeExtractorArguments(): String? {
+        val values = buildList {
+            if (!youtubeAccess.poToken.isNullOrBlank()) add("po_token=mweb+${youtubeAccess.poToken}")
+            if (!youtubeAccess.visitorData.isNullOrBlank()) add("visitor_data=${youtubeAccess.visitorData}")
+        }
+        return values.takeIf { it.isNotEmpty() }?.joinToString(";", prefix = "youtube:player_client=mweb;")
+    }
+
+    private fun safeError(value: String): String {
+        val lines = value.lineSequence().map(String::trim).filter(String::isNotBlank).toList()
+        val important = lines.lastOrNull { it.contains("ERROR:", ignoreCase = true) }
+            ?: lines.lastOrNull()
+            ?: "Bilinmeyen kaynak hatası."
+        return important.replace(Regex("\\s+"), " ").take(300)
+    }
 
     private fun sha256(value: String): String = sha256(value.toByteArray())
 

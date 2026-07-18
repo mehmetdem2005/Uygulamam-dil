@@ -6,6 +6,7 @@ import android.webkit.WebViewClient
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -27,6 +29,9 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.PauseCircle
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -74,6 +79,9 @@ fun LessonWorkspaceScreen(
     onBack: () -> Unit,
     onOpenDetails: () -> Unit,
     onDelete: () -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -108,6 +116,8 @@ fun LessonWorkspaceScreen(
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(Icons.Filled.DeleteOutline, "Dersi sil", tint = MaterialTheme.colorScheme.error)
@@ -115,17 +125,26 @@ fun LessonWorkspaceScreen(
                 }
             }
             item { RequestStatusCard(lesson, blocks.size, requestTotal) }
+            item { GenerationControlCard(lesson, onPause, onResume, onRetry) }
             item { SourceSummary(lesson) }
             if (blocks.isEmpty()) {
                 item { EmptyResultCard(lesson.state) }
             } else {
-                items(blocks, key = LessonBlock::index) { block -> GeneratedCard(lesson, block) }
+                items(blocks, key = LessonBlock::index) { block ->
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                        GeneratedCard(
+                            lesson,
+                            block,
+                            Modifier.fillMaxWidth(lesson.config.format.cardWidthFraction),
+                        )
+                    }
+                }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
                         onClick = { showDeleteDialog = true },
-                        modifier = Modifier.weight(1f).height(52.dp),
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
                         shape = RoundedCornerShape(13.dp),
                     ) {
                         Icon(Icons.Filled.DeleteOutline, null)
@@ -133,7 +152,7 @@ fun LessonWorkspaceScreen(
                     }
                     Button(
                         onClick = onOpenDetails,
-                        modifier = Modifier.weight(1.8f).height(52.dp),
+                        modifier = Modifier.weight(1.8f).heightIn(min = 52.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = DilTeal),
                         shape = RoundedCornerShape(13.dp),
                     ) {
@@ -150,6 +169,7 @@ fun LessonWorkspaceScreen(
 @Composable
 private fun RequestStatusCard(lesson: StoredLesson, completedCards: Int, requestTotal: Int) {
     val running = lesson.state == LessonJobState.INGESTING || lesson.state == LessonJobState.GENERATING
+    val completedRequests = ceil(completedCards.toDouble() / lesson.config.format.blocksPerRequest).toInt()
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         border = BorderStroke(1.dp, DilBorder),
@@ -164,10 +184,69 @@ private fun RequestStatusCard(lesson: StoredLesson, completedCards: Int, request
                 Icon(if (running) Icons.Filled.Sync else Icons.Filled.CheckCircle, null, tint = DilTeal)
             }
             Column(Modifier.weight(1f)) {
-                Text("${completedCards.coerceAtMost(requestTotal)} / $requestTotal istek sonucu", fontWeight = FontWeight.Bold)
+                Text("${completedRequests.coerceAtMost(requestTotal)} / $requestTotal istek sonucu", fontWeight = FontWeight.Bold)
                 Text(workspaceStateText(lesson.state), color = DilMuted)
             }
-            Text(if (running) "● İşleniyor" else "● Kaydedildi", color = if (running) Color(0xFF168CC0) else Color(0xFF16A56D))
+            Text(
+                if (running) "● İşleniyor" else "● Kaydedildi",
+                color = if (running) Color(0xFF168CC0) else Color(0xFF16A56D),
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GenerationControlCard(
+    lesson: StoredLesson,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onRetry: () -> Unit,
+) {
+    val metrics = lesson.generationMetrics
+    val hasControl = lesson.state in setOf(LessonJobState.GENERATING, LessonJobState.PAUSED, LessonJobState.FAILED)
+    if (!hasControl && lesson.lastSyncError.isNullOrBlank() && metrics.providerRequestCount == 0) return
+    Card(
+        colors = CardDefaults.cardColors(containerColor = if (lesson.lastSyncError.isNullOrBlank()) Color.White else Color(0xFFFFF7F7)),
+        border = BorderStroke(1.dp, if (lesson.lastSyncError.isNullOrBlank()) DilBorder else Color(0xFFF3C9CE)),
+        shape = RoundedCornerShape(16.dp),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            if (!lesson.lastSyncError.isNullOrBlank()) {
+                Text("Bağlantı / üretim bilgisi", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                Text(lesson.lastSyncError.orEmpty(), color = DilMuted, style = MaterialTheme.typography.bodyMedium)
+            }
+            if (metrics.providerRequestCount > 0) {
+                Text(
+                    "${metrics.providerRequestCount} API isteği · ${metrics.totalTokens} token · ${metrics.providerLatencyMillis / 1_000.0} sn sağlayıcı süresi",
+                    color = DilMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            when (lesson.state) {
+                LessonJobState.GENERATING -> OutlinedButton(onClick = onPause, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Icon(Icons.Filled.PauseCircle, null)
+                    Text("Üretimi Duraklat", modifier = Modifier.padding(start = 7.dp))
+                }
+                LessonJobState.PAUSED -> Button(
+                    onClick = onResume,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = DilTeal),
+                ) {
+                    Icon(Icons.Filled.PlayArrow, null)
+                    Text("Kaldığı Yerden Devam Et", modifier = Modifier.padding(start = 7.dp))
+                }
+                LessonJobState.FAILED -> Button(
+                    onClick = onRetry,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = DilTeal),
+                ) {
+                    Icon(Icons.Filled.Refresh, null)
+                    Text("Yeniden Dene", modifier = Modifier.padding(start = 7.dp))
+                }
+                else -> Unit
+            }
         }
     }
 }
@@ -181,7 +260,7 @@ private fun SourceSummary(lesson: StoredLesson) {
     ) {
         if (lesson.config.source.kind == SourceKind.YOUTUBE) YouTubeEmbed(lesson) else {
             Row(
-                Modifier.fillMaxWidth().height(88.dp).padding(14.dp),
+                Modifier.fillMaxWidth().heightIn(min = 88.dp).padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -206,7 +285,7 @@ private fun YouTubeEmbed(lesson: StoredLesson) {
     val start = range.startMillis / 1_000
     val end = range.endMillisExclusive / 1_000
     AndroidView(
-        modifier = Modifier.fillMaxWidth().height(190.dp),
+        modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
         factory = { context ->
             WebView(context).apply {
                 settings.javaScriptEnabled = true
@@ -240,7 +319,7 @@ private fun EmptyResultCard(state: LessonJobState) {
             Text("Henüz oluşturulmuş kart yok", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             Text(
                 if (state == LessonJobState.CREATED) {
-                    "Ders ayarları cihazda kaydedildi. Android uygulaması sunucu API'sine bağlanmadan işlem başladı olarak gösterilmez."
+                    "Ders ayarları kaydedildi; güvenli sunucu oturumu hazırlanıyor."
                 } else {
                     workspaceStateText(state)
                 },
@@ -252,8 +331,9 @@ private fun EmptyResultCard(state: LessonJobState) {
 }
 
 @Composable
-private fun GeneratedCard(lesson: StoredLesson, block: LessonBlock) {
+private fun GeneratedCard(lesson: StoredLesson, block: LessonBlock, modifier: Modifier = Modifier) {
     Card(
+        modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = Color.White),
         border = BorderStroke(1.dp, DilBorder),
         shape = RoundedCornerShape(16.dp),

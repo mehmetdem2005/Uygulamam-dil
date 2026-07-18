@@ -23,3 +23,5 @@ interface SourceIngestionGateway {
     suspend fun ingestYouTube(request: YouTubeIngestionRequest): List<SourceSegment>
     suspend fun ingestPdf(request: PdfIngestionRequest): List<SourceSegment>
 }
+
+class SourceAuthenticationRequiredException(message: String) : RuntimeException(message)

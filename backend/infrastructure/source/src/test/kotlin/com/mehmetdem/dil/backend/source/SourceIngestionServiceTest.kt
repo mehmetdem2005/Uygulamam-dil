@@ -1,17 +1,28 @@
 package com.mehmetdem.dil.backend.source
 
 import com.mehmetdem.dil.backend.domain.PdfIngestionRequest
+import com.mehmetdem.dil.backend.domain.SourceAuthenticationRequiredException
 import com.mehmetdem.dil.backend.domain.SourceUnit
 import com.mehmetdem.dil.backend.domain.YouTubeIngestionRequest
 import java.nio.file.Files
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class SourceIngestionServiceTest {
     @Test
     fun `clips youtube cues to selected interval`() = kotlinx.coroutines.test.runTest {
         val root = Files.createTempDirectory("source-youtube-test")
+        val cookies = Files.writeString(root.resolve("youtube-cookies.txt"), "# Netscape HTTP Cookie File")
         val runner = ExternalProcessRunner { command, _ ->
+            assertContains(command, "--js-runtimes")
+            assertEquals("deno", command[command.indexOf("--js-runtimes") + 1])
+            assertEquals(cookies.toString(), command[command.indexOf("--cookies") + 1])
+            val extractorArgs = command[command.indexOf("--extractor-args") + 1]
+            assertContains(extractorArgs, "player_client=mweb")
+            assertContains(extractorArgs, "po_token=mweb+test-po-token")
+            assertContains(extractorArgs, "visitor_data=test-visitor-data")
             val template = command[command.indexOf("--output") + 1]
             Files.writeString(
                 java.nio.file.Path.of(template.replace("%(ext)s", "en.vtt")),
@@ -27,7 +38,11 @@ class SourceIngestionServiceTest {
             )
             ProcessOutput(0, "", "")
         }
-        val service = SourceIngestionService(runner, root)
+        val service = SourceIngestionService(
+            runner,
+            root,
+            YouTubeAccessConfig(cookies, "test-po-token", "test-visitor-data"),
+        )
 
         val result = service.ingestYouTube(YouTubeIngestionRequest("dQw4w9WgXcQ", 2_000, 4_000))
 
@@ -35,6 +50,22 @@ class SourceIngestionServiceTest {
         assertEquals(2_000, result[0].startInclusive)
         assertEquals(4_000, result[1].endExclusive)
         assertEquals(SourceUnit.MILLISECOND, result[0].unit)
+        root.toFile().deleteRecursively()
+    }
+
+    @Test
+    fun `reports youtube server verification as an authentication requirement`() = kotlinx.coroutines.test.runTest {
+        val root = Files.createTempDirectory("source-youtube-auth-test")
+        val runner = ExternalProcessRunner { _, _ ->
+            ProcessOutput(1, "", "WARNING: ignored detail\nERROR: Sign in to confirm you’re not a bot.")
+        }
+        val service = SourceIngestionService(runner, root)
+
+        val failure = assertFailsWith<SourceAuthenticationRequiredException> {
+            service.ingestYouTube(YouTubeIngestionRequest("dQw4w9WgXcQ", 0, 5_000))
+        }
+
+        assertContains(failure.message.orEmpty(), "PO token")
         root.toFile().deleteRecursively()
     }
 

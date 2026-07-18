@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -151,7 +152,11 @@ fun LessonDetailScreen(
                             color = DilMuted,
                         )
                         Text(
-                            "Kart içeriği sunucudan dönmeden örnek metin gösterilmez.",
+                            if (lesson.generationMetrics.providerRequestCount > 0) {
+                                "${lesson.generationMetrics.providerRequestCount} gerçek API isteği · ${lesson.generationMetrics.totalTokens} token"
+                            } else {
+                                "Kart içeriği sunucudan dönmeden örnek metin gösterilmez."
+                            },
                             color = DilMuted,
                             style = MaterialTheme.typography.bodyMedium,
                         )
@@ -162,7 +167,7 @@ fun LessonDetailScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
                         onClick = { showDeleteDialog = true },
-                        modifier = Modifier.weight(1f).height(54.dp),
+                        modifier = Modifier.weight(1f).heightIn(min = 54.dp),
                         shape = RoundedCornerShape(14.dp),
                     ) {
                         Icon(Icons.Filled.DeleteOutline, null)
@@ -170,7 +175,7 @@ fun LessonDetailScreen(
                     }
                     Button(
                         onClick = onContinue,
-                        modifier = Modifier.weight(1.8f).height(54.dp),
+                        modifier = Modifier.weight(1.8f).heightIn(min = 54.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = DilTeal),
                         shape = RoundedCornerShape(14.dp),
                     ) {
@@ -253,7 +258,7 @@ private fun timeLabel(millis: Long): String {
 
 private fun jobStateLabel(state: LessonJobState): String = when (state) {
     LessonJobState.DRAFT -> "Taslak"
-    LessonJobState.CREATED -> "Cihaza kaydedildi"
+    LessonJobState.CREATED -> "Sunucu bağlantısı hazırlanıyor"
     LessonJobState.INGESTING -> "Kaynak işleniyor"
     LessonJobState.GENERATING -> "Kartlar hazırlanıyor"
     LessonJobState.PAUSED -> "İşlem duraklatıldı"
