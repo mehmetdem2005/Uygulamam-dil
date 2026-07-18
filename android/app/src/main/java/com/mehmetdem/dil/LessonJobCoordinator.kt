@@ -99,8 +99,9 @@ internal class LessonJobCoordinator(
             val lesson = repository.find(lessonId) ?: return
             if (lesson.state !in autoSyncStates) return
             try {
-                val remote = if (lesson.remoteJobId == null) createRemoteJob(lesson) else {
-                    api.getJob(installationId, lesson.remoteJobId)
+                val remoteId = lesson.remoteJobId
+                val remote = if (remoteId == null) createRemoteJob(lesson) else {
+                    api.getJob(installationId, remoteId)
                 }
                 failures = 0
                 apply(remote)
