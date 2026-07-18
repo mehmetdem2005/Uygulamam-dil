@@ -19,6 +19,7 @@ import com.mehmetdem.dil.backend.domain.PdfIngestionRequest
 import com.mehmetdem.dil.backend.domain.SourceSegment
 import com.mehmetdem.dil.backend.domain.YouTubeIngestionRequest
 import com.mehmetdem.dil.backend.source.SourceIngestionService
+import com.mehmetdem.dil.backend.source.YouTubeAccessConfig
 import com.mehmetdem.dil.backend.supabase.SupabaseConfig
 import com.mehmetdem.dil.backend.supabase.SupabaseHealthGateway
 import io.ktor.http.ContentType
@@ -52,6 +53,8 @@ import java.nio.file.Path
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.MessageDigest
+import java.nio.file.attribute.PosixFilePermission
+import java.util.Base64
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -80,12 +83,18 @@ fun Application.module() {
             ),
         )
     }
-    val sourceGateway = SourceIngestionService()
-    val formatCompiler = FormatSchemaCompiler()
     val jobDataRoot = Path.of(
         System.getenv("JOB_DATA_DIR")?.takeIf(String::isNotBlank)
             ?: "${System.getProperty("java.io.tmpdir")}/uygulamam-dil",
     ).toAbsolutePath().normalize()
+    val youtubeCookiesFile = prepareYouTubeCookies(jobDataRoot)
+    val youtubePoToken = envSecret("YOUTUBE_PO_TOKEN")
+    val youtubeVisitorData = envSecret("YOUTUBE_VISITOR_DATA")
+    val youtubeAccessConfigured = youtubeCookiesFile != null || youtubePoToken != null || youtubeVisitorData != null
+    val sourceGateway = SourceIngestionService(
+        youtubeAccess = YouTubeAccessConfig(youtubeCookiesFile, youtubePoToken, youtubeVisitorData),
+    )
+    val formatCompiler = FormatSchemaCompiler()
     val jobStore = FileLessonJobStore(jobDataRoot, json)
     val uploadStore = SourceUploadStore(jobDataRoot, json)
     val previewTokenService = previewTokenSecret.takeIf { it.length >= 32 }?.let { PreviewTokenService(it, json) }
@@ -163,6 +172,7 @@ fun Application.module() {
                     authConfigured = previewTokenService != null || supabaseGateway != null,
                     developmentAuthConfigured = developmentToken.isNotBlank(),
                     previewJobsConfigured = previewTokenService != null && orchestrator != null,
+                    youtubeAccessConfigured = youtubeAccessConfigured,
                     supabaseConfigured = supabaseGateway != null,
                     supabaseReachable = supabaseHealth?.reachable == true,
                     supabaseSchemaVersion = supabaseHealth?.schemaVersion,
@@ -340,6 +350,7 @@ private data class HealthResponse(
     val authConfigured: Boolean,
     val developmentAuthConfigured: Boolean,
     val previewJobsConfigured: Boolean,
+    val youtubeAccessConfigured: Boolean,
     val supabaseConfigured: Boolean,
     val supabaseReachable: Boolean,
     val supabaseSchemaVersion: String? = null,
@@ -354,6 +365,28 @@ private fun envLong(name: String, default: Long, range: LongRange): Long =
 private fun derivePreviewTokenSecret(developmentToken: String): String = MessageDigest.getInstance("SHA-256")
     .digest("uygulamam-dil-preview-session|$developmentToken".toByteArray(Charsets.UTF_8))
     .joinToString("") { "%02x".format(it) }
+
+private fun prepareYouTubeCookies(root: Path): Path? {
+    val encoded = System.getenv("YOUTUBE_COOKIES_BASE64")?.trim()?.takeIf(String::isNotBlank) ?: return null
+    val bytes = runCatching { Base64.getDecoder().decode(encoded) }
+        .recoverCatching { Base64.getUrlDecoder().decode(encoded) }
+        .getOrElse { throw IllegalArgumentException("YOUTUBE_COOKIES_BASE64 geçerli Base64 değil.") }
+    require(bytes.size in 20..2_000_000) { "YouTube çerez dosyası boyutu geçersiz." }
+    require(String(bytes, Charsets.UTF_8).lineSequence().firstOrNull()?.startsWith("# Netscape HTTP Cookie File") == true) {
+        "YouTube çerez dosyası Netscape biçiminde olmalıdır."
+    }
+    val directory = root.resolve("secrets").also(Files::createDirectories)
+    val destination = directory.resolve("youtube-cookies.txt")
+    Files.write(destination, bytes)
+    runCatching {
+        Files.setPosixFilePermissions(destination, setOf(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE))
+    }
+    return destination
+}
+
+private fun envSecret(name: String): String? = System.getenv(name)?.trim()?.takeIf(String::isNotBlank)?.also {
+    require(it.length <= 8_000 && '\n' !in it && '\r' !in it) { "$name değeri geçersiz." }
+}
 
 @Serializable
 private data class ApiError(val code: String, val message: String)

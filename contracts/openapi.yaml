@@ -288,6 +288,7 @@ components:
         - authConfigured
         - developmentAuthConfigured
         - previewJobsConfigured
+        - youtubeAccessConfigured
         - supabaseConfigured
         - supabaseReachable
       properties:
@@ -300,6 +301,8 @@ components:
         developmentAuthConfigured:
           type: boolean
         previewJobsConfigured:
+          type: boolean
+        youtubeAccessConfigured:
           type: boolean
         supabaseConfigured:
           type: boolean

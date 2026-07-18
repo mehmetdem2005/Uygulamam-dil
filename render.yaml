@@ -24,6 +24,12 @@ services:
         generateValue: true
       - key: JOB_DATA_DIR
         value: /tmp/uygulamam-dil
+      - key: YOUTUBE_COOKIES_BASE64
+        sync: false
+      - key: YOUTUBE_PO_TOKEN
+        sync: false
+      - key: YOUTUBE_VISITOR_DATA
+        sync: false
       - key: PREVIEW_DAILY_JOB_LIMIT
         value: "25"
       - key: LLM_MAX_ATTEMPTS

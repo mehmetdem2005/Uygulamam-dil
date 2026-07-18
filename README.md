@@ -64,6 +64,11 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-v4-pro
 SUPABASE_URL                 yalnızca sunucu
 SUPABASE_SERVICE_ROLE_KEY    yalnızca sunucu
+YOUTUBE_COOKIES_BASE64       isteğe bağlı Netscape çerez dosyası (Base64)
+YOUTUBE_PO_TOKEN             YouTube veri merkezi doğrulaması gerektiğinde
+YOUTUBE_VISITOR_DATA         PO token ile eşleşen ziyaretçi verisi
 ```
 
 Android uygulaması yalnızca kısa ömürlü önizleme/kullanıcı oturumunu ve Render API adresini alır. DeepSeek ve Supabase servis anahtarları sunucuda kalır. Faz 4 dosya checkpoint'i telefon bağlantısı kesildiğinde işi sürdürür; Render instance yeniden başlatmalarında kalıcılık Faz 7 Supabase job store ile tamamlanacaktır.
+
+YouTube bazı veri merkezi IP'lerinde oturum veya PO token doğrulaması ister. Bu değerler yalnız Render secret store'da tutulur; yapılandırılmadığında API sahte sonuç üretmez ve `source_auth_required` hatası döndürür. PDF ders zinciri bu doğrulamadan bağımsızdır.

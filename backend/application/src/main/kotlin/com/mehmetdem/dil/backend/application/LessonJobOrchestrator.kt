@@ -9,6 +9,7 @@ import com.mehmetdem.dil.backend.domain.ModelGateway
 import com.mehmetdem.dil.backend.domain.ModelStreamEvent
 import com.mehmetdem.dil.backend.domain.PdfIngestionRequest
 import com.mehmetdem.dil.backend.domain.SourceIngestionGateway
+import com.mehmetdem.dil.backend.domain.SourceAuthenticationRequiredException
 import com.mehmetdem.dil.backend.domain.YouTubeIngestionRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -369,6 +370,7 @@ private fun JsonElement?.asDisplayText(): String = when (this) {
 
 private fun Throwable.errorCode(): String = when (this) {
     is LessonJobOutputException -> "invalid_model_output"
+    is SourceAuthenticationRequiredException -> "source_auth_required"
     is kotlinx.coroutines.TimeoutCancellationException -> "provider_timeout"
     is IllegalArgumentException -> "invalid_job"
     else -> "generation_failed"
