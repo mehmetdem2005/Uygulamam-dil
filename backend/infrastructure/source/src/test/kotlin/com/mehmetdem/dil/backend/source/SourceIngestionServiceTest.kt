@@ -14,7 +14,7 @@ class SourceIngestionServiceTest {
         val root = Files.createTempDirectory("source-youtube-test")
         val runner = ExternalProcessRunner { command, _ ->
             assertContains(command, "--js-runtimes")
-            assertEquals("node", command[command.indexOf("--js-runtimes") + 1])
+            assertEquals("deno", command[command.indexOf("--js-runtimes") + 1])
             val template = command[command.indexOf("--output") + 1]
             Files.writeString(
                 java.nio.file.Path.of(template.replace("%(ext)s", "en.vtt")),
